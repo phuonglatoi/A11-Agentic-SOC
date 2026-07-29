@@ -519,8 +519,8 @@ def main() -> None:
         ),
         (
             (1450, 1920, 1735, 2070),
-            "EXECUTE + AUDIT",
-            "dry-run / webhook\nOPNsense alias",
+            "N8N / EXECUTOR",
+            "n8n webhook\nOPNsense alias + audit",
             SLATE,
         ),
     ]
@@ -546,7 +546,7 @@ def main() -> None:
 
     draw.rounded_rectangle((190, 2110, 1610, 2188), radius=16, fill=NAVY)
     final_text = (
-        "BÁO CÁO HOÀN CHỈNH  •  timeline  •  IP/port/protocol  •  evidence  •  MITRE  •  response"
+        "BÁO CÁO HOÀN CHỈNH  •  timeline  •  IP/port/protocol  •  evidence  •  RAG  •  n8n/response"
     )
     final_bbox = draw.textbbox((0, 0), final_text, font=font(21, True))
     draw.text(
@@ -558,7 +558,7 @@ def main() -> None:
 
     draw.text(
         (55, 2260),
-        "Critical path: nguồn log → A11 Ubuntu → SOCPipeline → Agentic AI → kết quả. Splunk chỉ quan sát bản sao log.",
+        "Critical path: nguồn log → A11 Ubuntu → SOCPipeline → Agentic AI/RAG → Incident/Report → n8n hoặc OPNsense. Splunk chỉ quan sát.",
         font=font(21, True),
         fill=MUTED,
     )
