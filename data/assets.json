@@ -1,0 +1,26 @@
+[
+  {
+    "name": "opnsense-gateway",
+    "ips": ["192.168.1.1"],
+    "type": "firewall",
+    "criticality": "critical",
+    "owner": "SOC",
+    "zone": "LAN"
+  },
+  {
+    "name": "ubuntu-web",
+    "ips": ["192.168.1.100", "192.168.1.10"],
+    "type": "web-server",
+    "criticality": "high",
+    "owner": "IT Operations",
+    "zone": "LAN"
+  },
+  {
+    "name": "kali-lab",
+    "ips": ["192.168.228.128"],
+    "type": "security-test",
+    "criticality": "low",
+    "owner": "Lab",
+    "zone": "WAN"
+  }
+]

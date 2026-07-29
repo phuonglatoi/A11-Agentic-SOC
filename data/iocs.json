@@ -1,0 +1,16 @@
+[
+  {
+    "value": "203.0.113.66",
+    "type": "ipv4",
+    "confidence": 95,
+    "source": "local-lab-feed",
+    "tags": ["scanner", "test-ioc"]
+  },
+  {
+    "value": "198.51.100.42",
+    "type": "ipv4",
+    "confidence": 85,
+    "source": "local-lab-feed",
+    "tags": ["brute-force", "test-ioc"]
+  }
+]

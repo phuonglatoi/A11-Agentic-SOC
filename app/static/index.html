@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A11 Agentic SOC - local-first security operations dashboard">
+  <title>A11 // Agentic SOC</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="A11 SOC home">
+      <span class="brand-mark">A11</span>
+      <span>
+        <strong>AGENTIC SOC</strong>
+        <small>LOCAL COMMAND</small>
+      </span>
+    </a>
+    <nav aria-label="Điều hướng chính">
+      <button class="nav-item active" data-view="overview">
+        <span class="nav-icon">⌁</span><span>Overview</span>
+      </button>
+      <button class="nav-item" data-view="alerts">
+        <span class="nav-icon">◈</span><span>Alert queue</span>
+        <b id="navAlertCount">0</b>
+      </button>
+      <button class="nav-item" data-view="incidents">
+        <span class="nav-icon">◇</span><span>Incidents</span>
+      </button>
+      <button class="nav-item" data-view="response">
+        <span class="nav-icon">⌾</span><span>Response</span>
+        <b id="navActionCount">0</b>
+      </button>
+      <button class="nav-item" data-view="audit">
+        <span class="nav-icon">≡</span><span>Audit trail</span>
+      </button>
+    </nav>
+    <div class="side-status">
+      <div class="status-row">
+        <span class="pulse" id="streamPulse"></span>
+        <span id="streamLabel">Connecting</span>
+      </div>
+      <div class="status-grid">
+        <span>Engine</span><strong id="engineMode">RULES</strong>
+        <span>Response</span><strong id="responseMode">DRY-RUN</strong>
+        <span>Syslog</span><strong id="syslogStatus">5514/UDP</strong>
+      </div>
+    </div>
+    <button id="logoutButton" class="logout-button">Lock console</button>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SECURITY OPERATIONS / <span id="currentViewLabel">OVERVIEW</span></p>
+        <h1 id="pageTitle">Live defense posture</h1>
+      </div>
+      <div class="top-actions">
+        <div class="clock-block">
+          <span>LOCAL TIME</span>
+          <strong id="clock">--:--:--</strong>
+        </div>
+        <button id="refreshButton" class="button secondary">↻ Refresh</button>
+        <button id="demoButton" class="button primary">Run lab scenario</button>
+      </div>
+    </header>
+
+    <section id="warningBanner" class="warning-banner hidden"></section>
+
+    <section class="view active" id="view-overview">
+      <div class="metrics">
+        <article class="metric critical-border">
+          <div class="metric-top"><span>CRITICAL SIGNALS</span><i>24H</i></div>
+          <strong id="metricCritical">0</strong>
+          <p>Requires immediate analyst review</p>
+        </article>
+        <article class="metric high-border">
+          <div class="metric-top"><span>HIGH ALERTS</span><i>LIVE</i></div>
+          <strong id="metricHigh">0</strong>
+          <p>Correlated priority detections</p>
+        </article>
+        <article class="metric cyan-border">
+          <div class="metric-top"><span>OPEN INCIDENTS</span><i>QUEUE</i></div>
+          <strong id="metricIncidents">0</strong>
+          <p>Cases under active investigation</p>
+        </article>
+        <article class="metric amber-border">
+          <div class="metric-top"><span>APPROVAL GATES</span><i>HITL</i></div>
+          <strong id="metricActions">0</strong>
+          <p>Disruptive actions awaiting a human</p>
+        </article>
+      </div>
+
+      <div class="overview-grid">
+        <article class="panel signal-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">SEVERITY PROFILE</p><h2>Alert distribution</h2></div>
+            <span class="live-tag"><i></i> LIVE</span>
+          </div>
+          <div class="severity-layout">
+            <div class="donut" id="severityDonut">
+              <div><strong id="metricTotal">0</strong><span>alerts</span></div>
+            </div>
+            <div class="severity-legend" id="severityLegend"></div>
+          </div>
+          <div class="volume-strip">
+            <div><span>CORRELATED EVENTS</span><strong id="metricEvents">0</strong></div>
+            <div><span>AUTOMATION</span><strong>ACTIVE</strong></div>
+            <div><span>DATA MODE</span><strong>LOCAL</strong></div>
+          </div>
+        </article>
+
+        <article class="panel agent-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">AGENT PIPELINE</p><h2>Decision chain</h2></div>
+            <span class="health-dot">healthy</span>
+          </div>
+          <div class="agent-chain">
+            <div class="agent active"><i>01</i><span><b>Normalize</b><small>Multi-source schema</small></span></div>
+            <div class="chain-line"></div>
+            <div class="agent active"><i>02</i><span><b>Triage</b><small>Severity + correlation</small></span></div>
+            <div class="chain-line"></div>
+            <div class="agent active"><i>03</i><span><b>Enrich</b><small>IOC + asset + MITRE</small></span></div>
+            <div class="chain-line"></div>
+            <div class="agent active"><i>04</i><span><b>Respond</b><small>Human approval gate</small></span></div>
+          </div>
+          <div class="agent-note">
+            <span>SAFE EXECUTION POLICY</span>
+            <p>Block, isolate, and account-control actions remain gated until an analyst records a decision.</p>
+          </div>
+        </article>
+      </div>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div><p class="eyebrow">REAL-TIME FEED</p><h2>Latest detections</h2></div>
+          <button class="text-button" data-jump="alerts">Open full queue →</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Severity</th><th>Detection</th><th>Source → Asset</th><th>MITRE</th><th>Events</th><th>Last seen</th></tr></thead>
+          <tbody id="overviewAlertRows"></tbody>
+        </table></div>
+        <div id="overviewEmpty" class="empty-state">
+          <span>⌁</span><h3>No telemetry yet</h3>
+          <p>Run the lab scenario or send Apache, Suricata, Windows, HEC, or syslog events.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="view" id="view-alerts">
+      <article class="panel">
+        <div class="panel-head toolbar-head">
+          <div><p class="eyebrow">DETECTION WORKBENCH</p><h2>Alert queue</h2></div>
+          <div class="filters">
+            <select id="severityFilter" aria-label="Lọc theo mức độ">
+              <option value="">All severity</option><option>critical</option><option>high</option><option>medium</option><option>low</option>
+            </select>
+            <select id="statusFilter" aria-label="Lọc theo trạng thái">
+              <option value="">All status</option><option>open</option><option>investigating</option><option>contained</option><option>closed</option><option>false_positive</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Severity</th><th>ID / Detection</th><th>Source IP</th><th>Asset</th><th>Confidence</th><th>Status</th><th>Last seen</th></tr></thead>
+          <tbody id="alertRows"></tbody>
+        </table></div>
+        <div id="alertEmpty" class="empty-state compact"><p>No matching alerts.</p></div>
+      </article>
+    </section>
+
+    <section class="view" id="view-incidents">
+      <div class="section-heading"><div><p class="eyebrow">CASE MANAGEMENT</p><h2>Active incidents</h2></div></div>
+      <div class="card-grid" id="incidentCards"></div>
+      <div id="incidentEmpty" class="panel empty-state"><span>◇</span><h3>No incidents</h3><p>High and critical alerts automatically open a case.</p></div>
+    </section>
+
+    <section class="view" id="view-response">
+      <div class="section-heading">
+        <div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Response approvals</h2></div>
+        <span class="policy-chip">POLICY: APPROVAL REQUIRED</span>
+      </div>
+      <div class="response-layout">
+        <div id="actionCards" class="action-list"></div>
+        <aside class="panel policy-panel">
+          <p class="eyebrow">EXECUTION GUARDRAILS</p>
+          <h3>Safety before speed.</h3>
+          <ul>
+            <li>Private and invalid IPs are never blocked.</li>
+            <li>Every analyst decision is immutable in the audit trail.</li>
+            <li>Dry-run is the default execution adapter.</li>
+            <li>OPNsense credentials stay in server-side environment variables.</li>
+          </ul>
+        </aside>
+      </div>
+      <div id="actionEmpty" class="panel empty-state"><span>⌾</span><h3>Approval queue clear</h3><p>No disruptive response is waiting.</p></div>
+    </section>
+
+    <section class="view" id="view-audit">
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">IMMUTABLE OPERATIONS LOG</p><h2>Audit trail</h2></div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Object</th><th>Outcome</th></tr></thead>
+          <tbody id="auditRows"></tbody>
+        </table></div>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="authDialog" class="modal auth-modal">
+    <form method="dialog" id="authForm">
+      <div class="modal-mark">A11</div>
+      <p class="eyebrow">SECURE LOCAL CONSOLE</p>
+      <h2>Authenticate to continue</h2>
+      <p class="muted">Enter the <code>SOC_ADMIN_TOKEN</code> configured on the server.</p>
+      <label>Admin token<input id="tokenInput" type="password" autocomplete="current-password" required placeholder="SOC_ADMIN_TOKEN"></label>
+      <p id="authError" class="form-error"></p>
+      <button class="button primary full" value="default">Unlock console</button>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog" class="modal detail-modal">
+    <button class="modal-close" id="detailClose" aria-label="Đóng">×</button>
+    <div id="detailContent"></div>
+  </dialog>
+
+  <dialog id="decisionDialog" class="modal decision-modal">
+    <form method="dialog" id="decisionForm">
+      <p class="eyebrow">RECORDED ANALYST DECISION</p>
+      <h2 id="decisionTitle">Approve response</h2>
+      <input type="hidden" id="decisionActionId">
+      <input type="hidden" id="decisionValue">
+      <label>Analyst name<input id="analystInput" required minlength="2" value="SOC Analyst"></label>
+      <label>Reason / note<textarea id="decisionReason" rows="4" placeholder="Evidence and rationale for this decision"></textarea></label>
+      <p id="decisionWarning" class="decision-warning"></p>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" id="decisionCancel">Cancel</button>
+        <button class="button primary" id="decisionSubmit" value="default">Confirm decision</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

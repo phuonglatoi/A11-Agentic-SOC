@@ -1,0 +1,14 @@
+[project]
+name = "a11-agentic-soc"
+version = "1.0.0"
+description = "Local-first real-time Agentic SOC automation"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 96
+target-version = "py311"

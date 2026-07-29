@@ -1,0 +1,101 @@
+name: a11-agentic-soc
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-soc}
+      POSTGRES_USER: ${POSTGRES_USER:-soc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-this-db-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-soc} -d ${POSTGRES_DB:-soc}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [soc_internal]
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-soc}:${POSTGRES_PASSWORD:-change-this-db-password}@postgres:5432/${POSTGRES_DB:-soc}
+      DATA_DIR: /app/data
+      KNOWLEDGE_DIR: /app/knowledge
+      OLLAMA_URL: http://ollama:11434
+    ports:
+      - "${SOC_HTTP_BIND:-127.0.0.1}:${SOC_HTTP_PORT:-8000}:8000"
+      - "${SYSLOG_BIND:-0.0.0.0}:${SYSLOG_PORT:-5514}:${SYSLOG_PORT:-5514}/udp"
+    volumes:
+      - ./data:/app/data:ro
+      - ./knowledge:/app/knowledge:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [soc_internal]
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks: [soc_internal]
+
+  n8n:
+    image: n8nio/n8n:latest
+    profiles: ["automation"]
+    restart: unless-stopped
+    environment:
+      N8N_HOST: 127.0.0.1
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-replace-with-a-long-random-key}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB:-soc}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-soc}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change-this-db-password}
+      A11_SOC_API_URL: http://api:8000
+      A11_SOC_ADMIN_TOKEN: ${SOC_ADMIN_TOKEN:-change-me-admin-token}
+      GENERIC_TIMEZONE: ${TZ:-Asia/Bangkok}
+      TZ: ${TZ:-Asia/Bangkok}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    networks: [soc_internal]
+
+  splunk-poller:
+    build: .
+    profiles: ["splunk"]
+    restart: unless-stopped
+    command: ["python", "-m", "app.integrations.splunk_poller"]
+    env_file: .env
+    environment:
+      SOC_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [soc_internal]
+
+networks:
+  soc_internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  ollama_data:
+  n8n_data:

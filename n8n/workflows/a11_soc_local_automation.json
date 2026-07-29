@@ -1,0 +1,231 @@
+{
+  "name": "A11 SOC Local Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a11-soc-alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf001",
+      "name": "SOC Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -860,
+        -240
+      ],
+      "webhookId": "a11-soc-alert"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst payload = body.payload ?? {};\nconst alertId = body.alert_id ?? body.id ?? payload.alert_id ?? 'unknown-alert';\nconst severity = String(body.severity ?? payload.severity ?? 'unknown').toLowerCase();\nconst title = body.title ?? payload.title ?? payload.reason ?? 'SOC alert';\nconst srcIp = body.src_ip ?? payload.src_ip ?? body.target ?? null;\nconst route = ['critical', 'high'].includes(severity) ? 'soc_hot_queue' : 'soc_watch_queue';\nreturn [{\n  json: {\n    response: {\n      ok: true,\n      workflow: 'A11 SOC Local Automation',\n      kind: 'alert_notification',\n      alert_id: String(alertId),\n      severity,\n      route\n    },\n    audit: {\n      actor: 'n8n',\n      action: 'automation.notification_received',\n      object_type: 'alert',\n      object_id: String(alertId),\n      outcome: 'success',\n      detail: {\n        workflow: 'A11 SOC Local Automation',\n        severity,\n        title,\n        src_ip: srcIp,\n        route,\n        received_at: new Date().toISOString(),\n        original_payload: body\n      }\n    }\n  }\n}];"
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf002",
+      "name": "Build Alert Automation Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.A11_SOC_API_URL || 'http://api:8000') + '/api/v1/automation/audit'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.A11_SOC_ADMIN_TOKEN || 'change-me-admin-token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json.audit)}}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf003",
+      "name": "Write Alert Audit to A11 SOC",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json.response)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf004",
+      "name": "Respond Alert Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -240,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a11-soc-response",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf005",
+      "name": "SOC Response Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -860,
+        220
+      ],
+      "webhookId": "a11-soc-response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst payload = body.payload ?? {};\nconst actionType = body.action_type ?? 'unknown_action';\nconst target = body.target ?? null;\nconst alertId = payload.alert_id ?? body.alert_id ?? target ?? 'unknown-action';\nconst allowedLocalActions = ['notify_soc', 'block_ip', 'isolate_host'];\nconst supported = allowedLocalActions.includes(actionType);\nconst outcome = supported ? 'success' : 'failed';\nreturn [{\n  json: {\n    response: {\n      ok: supported,\n      mode: 'n8n_webhook',\n      workflow: 'A11 SOC Local Automation',\n      action_type: actionType,\n      target,\n      message: supported\n        ? 'Action accepted by local n8n workflow and recorded in SOC audit.'\n        : 'Unsupported action type for local n8n workflow.'\n    },\n    audit: {\n      actor: 'n8n',\n      action: 'automation.response_webhook',\n      object_type: 'response_action',\n      object_id: String(alertId),\n      outcome,\n      detail: {\n        workflow: 'A11 SOC Local Automation',\n        action_type: actionType,\n        target,\n        payload,\n        received_at: new Date().toISOString(),\n        supported\n      }\n    }\n  }\n}];"
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf006",
+      "name": "Build Response Action Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.A11_SOC_API_URL || 'http://api:8000') + '/api/v1/automation/audit'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.A11_SOC_ADMIN_TOKEN || 'change-me-admin-token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json.audit)}}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf007",
+      "name": "Write Response Audit to A11 SOC",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json.response)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf008",
+      "name": "Respond Response Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -240,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "SOC Alert Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Alert Automation Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Automation Payload": {
+      "main": [
+        [
+          {
+            "node": "Write Alert Audit to A11 SOC",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond Alert Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SOC Response Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Response Action Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Response Action Payload": {
+      "main": [
+        [
+          {
+            "node": "Write Response Audit to A11 SOC",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond Response Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-29T00:00:00.000Z",
+  "versionId": "7f58f8d6-9e98-464c-8cfb-14d6217cf009",
+  "active": false
+}
