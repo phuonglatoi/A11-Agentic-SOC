@@ -6,6 +6,7 @@ __pycache__/
 .env
 .artifacts/
 .work/
+outputs/
 qa_deps/
 work/pydeps/
 work/render*/
