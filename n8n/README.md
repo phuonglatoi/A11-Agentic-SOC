@@ -56,6 +56,42 @@ docker compose --profile automation up -d --build api n8n
 
 ## Test the alert webhook from inside Docker
 
+For the thesis demo, prefer the **production** webhook URLs:
+
+```text
+http://127.0.0.1:5678/webhook/a11-soc-alert
+http://127.0.0.1:5678/webhook/a11-soc-response
+```
+
+Do not use `/webhook-test/...` for the final demo. Test URLs are temporary and
+only exist while the editor is explicitly waiting for a test event. Production
+executions do not animate on the canvas; check `n8n -> Executions` instead.
+
+Fast host-side smoke test:
+
+```bash
+bash scripts/test_n8n_webhooks.sh
+```
+
+Expected proof in A11 SOC:
+
+```text
+Audit trail -> actor: n8n -> automation.notification_received
+Audit trail -> actor: n8n -> automation.response_webhook
+```
+
+If the script returns 404, the workflow is not published or the URL path is
+wrong. The correct paths in this project are:
+
+```text
+a11-soc-alert
+a11-soc-response
+```
+
+If the script returns 500 or times out, n8n received the webhook but a later
+node failed. Open `n8n -> Executions`, click the failed execution and inspect
+`Write Alert Audit to A11 SOC` or `Write Response Audit to A11 SOC`.
+
 ```bash
 docker compose exec api python - <<'PY'
 import httpx

@@ -75,6 +75,25 @@ http://n8n:5678/webhook/a11-soc-alert
 http://n8n:5678/webhook/a11-soc-response
 ```
 
+In n8n 2.x the old `Active` switch is shown as `Published`. For the lab report,
+use production webhook URLs, not temporary test URLs:
+
+```text
+http://127.0.0.1:5678/webhook/a11-soc-alert
+http://127.0.0.1:5678/webhook/a11-soc-response
+```
+
+Run an end-to-end smoke test:
+
+```bash
+bash scripts/test_n8n_webhooks.sh
+```
+
+Successful n8n evidence appears in two places:
+
+- `n8n -> Executions`
+- `A11 SOC -> Audit trail`, with `actor=n8n`
+
 ## 5. Generate demo events
 
 ```bash
