@@ -230,6 +230,24 @@ docker compose logs -f n8n
 curl http://127.0.0.1:8000/health
 ```
 
+If the API cannot start and the log contains `connection failed: server closed
+the connection unexpectedly`, wait for PostgreSQL to become healthy and restart
+the API:
+
+```bash
+docker compose ps
+docker compose restart api
+```
+
+For a fresh lab where previous `.env` database values were wrong, reset only the
+PostgreSQL volume and rebuild:
+
+```bash
+docker compose down
+docker volume rm a11-agentic-soc_postgres_data
+docker compose --profile automation up -d --build
+```
+
 The expected complete flow is:
 
 ```text
