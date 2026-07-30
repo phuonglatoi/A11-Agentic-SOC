@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 set -u
 
-SOC_URL="${SOC_URL:-http://127.0.0.1:8000}"
-N8N_URL="${N8N_URL:-http://127.0.0.1:5678}"
+env_value() {
+  local name="$1"
+  if [ -f .env ]; then
+    grep -E "^${name}=" .env | tail -n 1 | cut -d= -f2-
+  fi
+}
+
+SOC_HTTP_PORT="${SOC_HTTP_PORT:-$(env_value SOC_HTTP_PORT)}"
+N8N_PORT="${N8N_PORT:-$(env_value N8N_PORT)}"
+SOC_URL="${SOC_URL:-http://127.0.0.1:${SOC_HTTP_PORT:-8000}}"
+N8N_URL="${N8N_URL:-http://127.0.0.1:${N8N_PORT:-5678}}"
+SOC_ADMIN_TOKEN="${SOC_ADMIN_TOKEN:-$(env_value SOC_ADMIN_TOKEN)}"
 SOC_ADMIN_TOKEN="${SOC_ADMIN_TOKEN:-a11-admin-token-123456}"
 
 alert_payload='{"alert_id":"n8n-smoke-alert","severity":"high","title":"n8n production webhook smoke test","src_ip":"192.168.228.128"}'
