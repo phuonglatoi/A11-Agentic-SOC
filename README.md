@@ -6,7 +6,9 @@ triage, enrichment, RAG, incident, report và response có phê duyệt.
 
 ## Thành phần đã có
 
-- Nhận log qua REST, Splunk-compatible HEC và syslog UDP 5514.
+- Nhận log qua REST, Splunk-compatible HEC và syslog UDP 5514. Khi chạy bằng
+  Docker, host UDP 514 cũng được forward vào collector để tương thích OPNsense
+  / pfSense cũ.
 - Chuẩn hóa Apache access log, Suricata EVE JSON, Windows Security Event và
   sự kiện JSON tổng quát.
 - Gom nhóm/correlation theo fingerprint trong cửa sổ 5 phút.
@@ -108,9 +110,21 @@ HEC nhận được cả nhiều JSON object nối tiếp nhau như Splunk HEC.
 
 ### Syslog từ OPNsense
 
-Trong OPNsense, cấu hình remote logging đến IP Ubuntu chạy SOC, UDP port `5514`.
-Nếu dùng Docker/VMware, bảo đảm VMnet và firewall Ubuntu cho phép đúng IP nguồn,
-không mở port này ra Internet.
+Trong OPNsense, cấu hình remote logging đến IP Ubuntu chạy SOC. Với bản mới có
+thể đặt UDP port `5514`; với OPNsense 19.1 hoặc giao diện không có ô port, để
+mặc định UDP `514`. Docker Compose đã publish cả host `514/udp` và `5514/udp`
+vào collector nội bộ. Nếu dùng Docker/VMware, bảo đảm VMnet và firewall Ubuntu
+cho phép đúng IP nguồn, không mở các port này ra Internet.
+
+Kiểm tra nhanh trên Ubuntu:
+
+```bash
+sudo tcpdump -ni any 'udp port 514 or udp port 5514'
+docker compose logs -f api
+```
+
+Khi A11 SOC nhận được syslog, log API sẽ có dòng dạng
+`Received syslog datagram from ...`.
 
 ### Splunk Cloud
 

@@ -32,6 +32,9 @@ services:
     ports:
       - "${SOC_HTTP_BIND:-127.0.0.1}:${SOC_HTTP_PORT:-8000}:8000"
       - "${SYSLOG_BIND:-0.0.0.0}:${SYSLOG_PORT:-5514}:${SYSLOG_PORT:-5514}/udp"
+      # Compatibility for appliances that only send remote syslog to UDP/514.
+      # The container still listens on SYSLOG_PORT; Docker forwards host 514 to it.
+      - "${SYSLOG_COMPAT_BIND:-0.0.0.0}:${SYSLOG_COMPAT_PORT:-514}:${SYSLOG_PORT:-5514}/udp"
     volumes:
       - ./data:/app/data:ro
       - ./knowledge:/app/knowledge:ro

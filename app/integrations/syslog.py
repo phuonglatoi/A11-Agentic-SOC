@@ -21,11 +21,17 @@ class SyslogProtocol(asyncio.DatagramProtocol):
     async def _process(self, message: str, addr) -> None:
         with self.database.session_factory() as db:
             try:
-                await self.pipeline.process(
+                alert = await self.pipeline.process(
                     db,
                     message,
                     source_hint="syslog",
                     metadata={"remote_ip": addr[0]},
+                )
+                logger.info(
+                    "Received syslog datagram from %s; alert_id=%s severity=%s",
+                    addr[0],
+                    alert.id,
+                    alert.severity,
                 )
             except Exception:
                 logger.exception("Failed to process a syslog datagram from %s", addr)
