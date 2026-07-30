@@ -238,17 +238,17 @@
       "main": [
         [
           {
+            "node": "Respond Alert Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Write Alert Audit to A11 SOC",
             "type": "main",
             "index": 0
           },
           {
             "node": "Send Alert Email to Mailpit",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Respond Alert Webhook",
             "type": "main",
             "index": 0
           }
@@ -270,17 +270,17 @@
       "main": [
         [
           {
+            "node": "Respond Response Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Write Response Audit to A11 SOC",
             "type": "main",
             "index": 0
           },
           {
             "node": "Send Response Email to Mailpit",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Respond Response Webhook",
             "type": "main",
             "index": 0
           }
