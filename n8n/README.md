@@ -12,12 +12,23 @@ The workflow exposes two production webhooks after it is imported and activated:
 
 - `POST /webhook/a11-soc-alert`
   - Called by `NOTIFICATION_WEBHOOK_URL`.
+  - Performs a second n8n-stage attack classification from the alert payload.
+  - Sends a local email notification to Mailpit.
   - Records the alert notification back into the A11 SOC audit log.
 - `POST /webhook/a11-soc-response`
   - Called by `RESPONSE_WEBHOOK_URL` when an approved response action runs in
     `RESPONSE_MODE=webhook`.
-  - Validates the local action type and records the automation result back into
-    the A11 SOC audit log.
+  - Validates the local action type, sends a response email to Mailpit and
+    records the automation result back into the A11 SOC audit log.
+
+The lab email inbox is Mailpit:
+
+```text
+http://127.0.0.1:8025
+```
+
+This is intentionally local-only. It gives you email evidence for the thesis
+without using Gmail, Outlook or storing SMTP passwords in the repository.
 
 ## Run on Ubuntu
 
@@ -78,6 +89,13 @@ Expected proof in A11 SOC:
 ```text
 Audit trail -> actor: n8n -> automation.notification_received
 Audit trail -> actor: n8n -> automation.response_webhook
+```
+
+Expected proof in Mailpit:
+
+```text
+Inbox -> [A11 SOC][HIGH][http_flood_dos] ...
+Email body -> Attack type, MITRE, source IP, destination and recommendations
 ```
 
 If the script returns 404, the workflow is not published or the URL path is

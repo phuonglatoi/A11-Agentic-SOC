@@ -71,16 +71,35 @@ services:
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change-this-db-password}
       A11_SOC_API_URL: http://api:8000
       A11_SOC_ADMIN_TOKEN: ${SOC_ADMIN_TOKEN:-change-me-admin-token}
+      A11_SOC_MAILPIT_URL: http://mailpit:8025
+      A11_SOC_ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-soc-analyst@a11.local}
+      A11_SOC_ALERT_EMAIL_FROM: ${ALERT_EMAIL_FROM:-a11-soc@a11.local}
       GENERIC_TIMEZONE: ${TZ:-Asia/Bangkok}
       TZ: ${TZ:-Asia/Bangkok}
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     ports:
       - "127.0.0.1:${N8N_PORT:-5678}:5678"
     volumes:
       - n8n_data:/home/node/.n8n
       - ./n8n/workflows:/workflows:ro
+    networks: [soc_internal]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: ["automation"]
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: ${MAILPIT_MAX_MESSAGES:-5000}
+      MP_DATABASE: /data/mailpit.db
+      TZ: ${TZ:-Asia/Bangkok}
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    volumes:
+      - mailpit_data:/data
     networks: [soc_internal]
 
   splunk-poller:
@@ -104,3 +123,4 @@ volumes:
   postgres_data:
   ollama_data:
   n8n_data:
+  mailpit_data:

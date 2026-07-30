@@ -35,9 +35,18 @@ def propose_actions(
                 "alert_id": alert_id,
                 "severity": severity,
                 "title": triage["title"],
+                "description": triage.get("description"),
+                "confidence": triage.get("confidence"),
+                "attack_type": (triage.get("ml_prediction") or {}).get("attack_type"),
+                "ml_prediction": triage.get("ml_prediction"),
+                "mitre": triage.get("mitre"),
+                "reasons": triage.get("reasons"),
+                "recommendations": triage.get("recommendations"),
                 "src_ip": event.get("src_ip"),
                 "dst_ip": event.get("dst_ip"),
+                "dst_port": event.get("dst_port"),
                 "event_type": event.get("event_type"),
+                "asset": enrichment.get("asset"),
             },
         }
     ]
@@ -54,6 +63,9 @@ def propose_actions(
                 "payload": {
                     "alert_id": alert_id,
                     "reason": triage["title"],
+                    "severity": severity,
+                    "attack_type": (triage.get("ml_prediction") or {}).get("attack_type"),
+                    "mitre": triage.get("mitre"),
                     "destination_asset": enrichment.get("asset"),
                 },
             }
@@ -67,7 +79,13 @@ def propose_actions(
                 "target": event["host"],
                 "risk": "critical",
                 "approval_required": True,
-                "payload": {"alert_id": alert_id, "reason": triage["title"]},
+                "payload": {
+                    "alert_id": alert_id,
+                    "reason": triage["title"],
+                    "severity": severity,
+                    "attack_type": (triage.get("ml_prediction") or {}).get("attack_type"),
+                    "mitre": triage.get("mitre"),
+                },
             }
         )
     return proposals

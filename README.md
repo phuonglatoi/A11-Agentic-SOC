@@ -18,8 +18,13 @@ OPNsense / Apache / Suricata / Windows log
   -> deterministic triage + RAG playbook
   -> alert / incident / report / response action
   -> analyst approval
-  -> n8n webhook or OPNsense adapter
+  -> n8n attack analysis + Mailpit email or OPNsense adapter
 ```
+
+n8n acts as the SOAR automation layer. It receives high/critical alert and
+approved response webhooks, classifies the attack again from the SOC payload,
+sends a local email notification to Mailpit, and writes an automation audit
+record back to A11 SOC.
 
 Train the bundled demo model:
 

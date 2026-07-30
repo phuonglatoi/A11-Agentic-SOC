@@ -52,6 +52,7 @@ Services:
 
 - A11 SOC dashboard/API: `http://127.0.0.1:8000`
 - n8n: `http://127.0.0.1:5678`
+- Mailpit local email inbox: `http://127.0.0.1:8025`
 - Syslog collector: UDP `5514`; host UDP `514` is also forwarded to the same
   collector for OPNsense/pfSense versions that use the default syslog port.
 - HEC-compatible collector: TCP `8000`
@@ -93,6 +94,15 @@ Successful n8n evidence appears in two places:
 
 - `n8n -> Executions`
 - `A11 SOC -> Audit trail`, with `actor=n8n`
+- `Mailpit -> Inbox`, with an `[A11 SOC]` alert email
+
+The n8n workflow performs its own lightweight attack classification before
+sending email. The email subject contains the n8n-stage attack type, for
+example:
+
+```text
+[A11 SOC][HIGH][http_flood_dos] Possible HTTP flood / DoS traffic
+```
 
 ## 5. Generate demo events
 
