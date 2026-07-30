@@ -15,6 +15,16 @@ def max_severity(*values: str) -> str:
     return max(known, key=SEVERITY_RANK.get) if known else "low"
 
 
+def _append_mitre(
+    mitre: list[dict[str, str]],
+    entries: list[dict[str, str]] | None,
+) -> None:
+    for entry in entries or []:
+        technique_id = entry.get("id")
+        if technique_id and not any(item.get("id") == technique_id for item in mitre):
+            mitre.append({"id": technique_id, "name": entry.get("name", technique_id)})
+
+
 def triage_event(
     event: dict[str, Any],
     event_count: int = 1,
@@ -31,6 +41,7 @@ def triage_event(
     ]
     title_override: str | None = None
     description_override: str | None = None
+    ml_prediction = event.get("ml_prediction") or {}
 
     if event_type.startswith("suricata."):
         sensor_severity = event.get("sensor_severity")
@@ -151,6 +162,28 @@ def triage_event(
     if sensor_value in SEVERITY_RANK:
         severity = max_severity(severity, sensor_value)
         reasons.append("The upstream sensor supplied a severity value.")
+
+    if ml_prediction.get("enabled") and ml_prediction.get("status") == "ok":
+        attack_type = str(ml_prediction.get("attack_type") or "")
+        ml_confidence = float(ml_prediction.get("confidence") or 0.0)
+        ml_severity = str(ml_prediction.get("severity") or "low")
+        if attack_type and attack_type != "benign" and ml_confidence >= 0.65:
+            severity = max_severity(severity, ml_severity)
+            confidence = max(confidence, min(0.97, ml_confidence))
+            reasons.append(
+                "ML Detection Agent predicted "
+                f"{attack_type} with confidence {ml_confidence:.0%}."
+            )
+            _append_mitre(mitre, ml_prediction.get("mitre"))
+            if ml_prediction.get("recommended_title") and SEVERITY_RANK[ml_severity] >= 3:
+                title_override = title_override or ml_prediction["recommended_title"]
+            if ml_prediction.get("recommended_description"):
+                description_override = (
+                    description_override or ml_prediction["recommended_description"]
+                )
+            recommendations.append(
+                "Review the ML prediction together with raw telemetry and RAG playbooks."
+            )
 
     if enrichment.get("ioc_matches"):
         severity = max_severity(severity, "high")

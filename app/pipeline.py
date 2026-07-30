@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.enrichment import EnrichmentAgent
 from app.agents.llm import LocalLLMAgent
+from app.agents.ml_detector import MLDetectionAgent
 from app.agents.rag import LocalKnowledgeBase
 from app.agents.report import build_report
 from app.agents.response import propose_actions
@@ -63,6 +64,7 @@ class SOCPipeline:
         self.bus = bus
         self.enrichment = EnrichmentAgent(settings.data_dir)
         self.knowledge = LocalKnowledgeBase(settings.knowledge_dir)
+        self.ml_detector = MLDetectionAgent(settings.attack_model_path)
         self.llm = LocalLLMAgent(settings)
         self.executor = ResponseExecutor(settings)
 
@@ -91,7 +93,10 @@ class SOCPipeline:
         )
         old_severity = existing.severity if existing else "low"
         event_count = (existing.event_count + 1) if existing else 1
+        ml_prediction = self.ml_detector.detect(normalized, event_count=event_count)
+        normalized["ml_prediction"] = ml_prediction
         triage = triage_event(normalized, event_count=event_count, enrichment=enriched)
+        triage["ml_prediction"] = ml_prediction
         query = " ".join(
             [
                 normalized.get("event_type", ""),
@@ -185,6 +190,9 @@ class SOCPipeline:
                     "event_count": alert.event_count,
                     "escalated": escalated,
                     "llm_status": ai_analysis.get("status"),
+                    "ml_status": ml_prediction.get("status"),
+                    "ml_attack_type": ml_prediction.get("attack_type"),
+                    "ml_confidence": ml_prediction.get("confidence"),
                 },
             )
         )

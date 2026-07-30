@@ -146,7 +146,10 @@ function render() {
 
 function renderRuntime() {
   const llm = state.runtime.ollama_enabled;
-  $("#engineMode").textContent = llm ? state.runtime.ollama_model.toUpperCase() : "RULES + RAG";
+  const ml = state.runtime.ml_detector?.enabled;
+  $("#engineMode").textContent = llm
+    ? `${state.runtime.ollama_model.toUpperCase()} + ${ml ? "ML + " : ""}RAG`
+    : `RULES + ${ml ? "ML + " : ""}RAG`;
   $("#responseMode").textContent = String(state.runtime.response_mode || "dry_run").toUpperCase();
   $("#syslogStatus").textContent = state.runtime.syslog?.enabled ? `${state.runtime.syslog.port}/UDP` : "OFF";
   const warnings = state.runtime.warnings || [];
@@ -226,6 +229,13 @@ function openAlert(id) {
   const reasons = (alert.triage?.reasons || []).map((item) => `<li>${esc(item)}</li>`).join("");
   const recommendations = (alert.recommendations || []).map((item) => `<li>${esc(item)}</li>`).join("");
   const knowledge = (alert.triage?.knowledge || []).map((item) => `<li><b>${esc(item.name)}</b> · score ${esc(item.score)}<br>${esc(item.excerpt)}</li>`).join("");
+  const ml = alert.triage?.ml_prediction || alert.normalized_event?.ml_prediction || {};
+  const mlSection = ml.enabled ? `
+    <div class="detail-section"><h3>ML Detection Agent</h3>
+      <p><b>${esc(ml.attack_type || "unknown")}</b> · confidence ${Math.round((ml.confidence || 0) * 100)}% · model ${esc(ml.model_version || "unknown")}</p>
+      <pre class="evidence-box">${esc(JSON.stringify(ml.top_labels || [], null, 2))}</pre>
+    </div>
+  ` : "";
   $("#detailContent").innerHTML = `<div class="detail-body">
     <div class="detail-title-row"><p class="eyebrow">ALERT INVESTIGATION / ${esc(alert.id)}</p><h2>${esc(alert.title)}</h2>${severityBadge(alert.severity)}</div>
     <div class="detail-grid">
@@ -235,6 +245,7 @@ function openAlert(id) {
       <div><span>Asset</span><strong>${esc(alert.asset || "unmapped")}</strong></div><div><span>Engine</span><strong>${esc(alert.ai_analysis?.engine || "deterministic")}</strong></div>
     </div>
     <div class="detail-section"><h3>Assessment</h3><p>${esc(alert.description)}</p><ul>${reasons}</ul></div>
+    ${mlSection}
     <div class="detail-section"><h3>MITRE ATT&CK</h3><p>${(alert.mitre || []).map((item) => `${esc(item.id)} · ${esc(item.name)}`).join("<br>") || "Not mapped"}</p></div>
     <div class="detail-section"><h3>Local knowledge retrieval</h3><ul>${knowledge || "<li>No matching playbook excerpt.</li>"}</ul></div>
     <div class="detail-section"><h3>Recommendations</h3><ul>${recommendations}</ul></div>

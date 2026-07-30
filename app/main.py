@@ -145,6 +145,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "port": settings.syslog_port,
             },
             "knowledge": pipeline.knowledge.stats(),
+            "ml_detector": pipeline.ml_detector.stats(),
             "warnings": settings.validate_safety(),
         }
 

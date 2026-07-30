@@ -1,5 +1,44 @@
 # A11 Agentic SOC Automation
 
+## 2026 update: Dataset + ML Detection Agent
+
+The project now includes a local **ML Detection Agent** trained from sanitized
+seed events and designed to be retrained with **DataSense: CIC IIoT dataset
+2025**. This dataset is the recommended latest benchmark for the A11 lab because
+it covers HTTP Flood/DoS/DDoS, Recon/Nmap, Web SQL Injection/XSS, brute force,
+MITM/spoofing and Mirai-like malware scenarios.
+
+Runtime flow:
+
+```text
+OPNsense / Apache / Suricata / Windows log
+  -> normalize
+  -> enrichment
+  -> ML Detection Agent
+  -> deterministic triage + RAG playbook
+  -> alert / incident / report / response action
+  -> analyst approval
+  -> n8n webhook or OPNsense adapter
+```
+
+Train the bundled demo model:
+
+```bash
+python3 scripts/train_attack_classifier.py \
+  --input datasets/a11_seed_labeled_events.jsonl \
+  --output models/attack_classifier.json
+```
+
+Train with an official DataSense/CIC CSV after downloading it:
+
+```bash
+python3 scripts/train_attack_classifier.py \
+  --input datasets/a11_seed_labeled_events.jsonl \
+  --csv /path/to/DataSense_or_CIC_dataset.csv \
+  --sample-per-class 5000 \
+  --output models/attack_classifier.json
+```
+
 Hệ thống SOC real-time chạy cục bộ, được hiện thực hóa từ hai tài liệu TTTN:
 OPNsense/Apache/Splunk làm nguồn telemetry và Agentic AI làm lớp tự động hóa
 triage, enrichment, RAG, incident, report và response có phê duyệt.

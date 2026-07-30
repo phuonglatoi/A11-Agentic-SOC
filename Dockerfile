@@ -12,6 +12,7 @@ RUN useradd --create-home --uid 10001 soc
 COPY --chown=soc:soc app ./app
 COPY --chown=soc:soc data ./data
 COPY --chown=soc:soc knowledge ./knowledge
+COPY --chown=soc:soc models ./models
 RUN mkdir -p /app/runtime && chown -R soc:soc /app/runtime
 
 USER soc

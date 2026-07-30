@@ -43,6 +43,7 @@ class Settings:
     syslog_port: int = 5514
     data_dir: Path = Path("data")
     knowledge_dir: Path = Path("knowledge")
+    attack_model_path: Path = Path("models/attack_classifier.json")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -83,6 +84,9 @@ class Settings:
             data_dir=Path(os.getenv("DATA_DIR", str(defaults.data_dir))),
             knowledge_dir=Path(
                 os.getenv("KNOWLEDGE_DIR", str(defaults.knowledge_dir))
+            ),
+            attack_model_path=Path(
+                os.getenv("ATTACK_MODEL_PATH", str(defaults.attack_model_path))
             ),
         )
 

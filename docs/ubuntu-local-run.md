@@ -96,6 +96,61 @@ curl -s http://127.0.0.1:8000/api/v1/ingest \
 
 ## 6. Query the RAG agent
 
+Before querying RAG, you can verify the local ML Detection Agent. It sits in the
+analysis chain before triage:
+
+```text
+normalize -> enrich -> ML Detection Agent -> triage -> RAG -> report/action
+```
+
+The bundled model is stored at:
+
+```text
+models/attack_classifier.json
+```
+
+It is trained from `datasets/a11_seed_labeled_events.jsonl` so the lab can run
+immediately after cloning. The recommended latest external benchmark for this
+project is **DataSense: CIC IIoT dataset 2025**, because it contains classes
+that match the thesis lab: HTTP Flood/DoS/DDoS, Recon/Port Scan, Web SQLi/XSS,
+SSH/Telnet brute force, MITM/spoofing and Mirai-like malware.
+
+Retrain the built-in seed model:
+
+```bash
+python3 scripts/train_attack_classifier.py \
+  --input datasets/a11_seed_labeled_events.jsonl \
+  --output models/attack_classifier.json
+```
+
+Retrain with DataSense/CIC CSV after downloading it from the official source:
+
+```bash
+python3 scripts/train_attack_classifier.py \
+  --input datasets/a11_seed_labeled_events.jsonl \
+  --csv /path/to/DataSense_or_CIC_dataset.csv \
+  --sample-per-class 5000 \
+  --output models/attack_classifier.json
+```
+
+Then rebuild the API:
+
+```bash
+docker compose build api
+docker compose --profile automation up -d
+```
+
+Check that the model is loaded:
+
+```bash
+curl -s http://127.0.0.1:8000/api/v1/runtime \
+  -H "Authorization: Bearer <strong-admin-token>"
+```
+
+The dashboard should show `RULES + ML + RAG` when the model is available. In an
+alert detail panel, the `ML Detection Agent` section shows the predicted attack
+type, confidence and top labels.
+
 ```bash
 curl -s http://127.0.0.1:8000/api/v1/knowledge/search \
   -H "Authorization: Bearer <strong-admin-token>" \
@@ -276,7 +331,7 @@ The expected complete flow is:
 
 ```text
 Attacker -> OPNsense/Web/Windows logs -> A11 SOC collectors
--> normalize -> enrich -> correlate -> RAG/triage/optional Ollama
+-> normalize -> enrich -> ML Detection Agent -> correlate -> RAG/triage/optional Ollama
 -> alert/incident/report/action -> analyst approval
 -> n8n webhook or OPNsense adapter -> audit/dashboard
 ```
