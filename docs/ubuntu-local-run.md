@@ -221,6 +221,30 @@ Kali web attack -> OPNsense NAT -> Web access.log
 -> incident/report/action -> analyst approval -> n8n audit callback
 ```
 
+### Controlled GoldenEye / HTTP flood lab
+
+Only run this against the lab WAN address, never against public systems. A safe
+starting point is a short run from Kali:
+
+```bash
+python3 goldeneye.py http://192.168.228.142 -s 100 -w 10
+```
+
+The SOC detects the firewall side of this test from OPNsense `filterlog` syslog.
+When the same source creates at least 100 correlated TCP events against a web
+port (`80`, `443`, `8000`, `8080`, `8443`) inside the correlation window, the
+triage agent raises:
+
+```text
+Possible HTTP flood / DoS traffic
+Severity: High
+MITRE: T1498 Network Denial of Service
+```
+
+For the richest evidence, also ship Apache `access.log` as described above. The
+firewall log proves the network flood; the access log proves the HTTP path and
+user-agent such as `GoldenEye`, `sqlmap`, `dirb` or `nikto`.
+
 ## 8. Operational checks
 
 ```bash

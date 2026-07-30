@@ -29,6 +29,8 @@ def triage_event(
     recommendations: list[str] = [
         "Validate the alert against raw telemetry before closing it."
     ]
+    title_override: str | None = None
+    description_override: str | None = None
 
     if event_type.startswith("suricata."):
         sensor_severity = event.get("sensor_severity")
@@ -67,6 +69,59 @@ def triage_event(
         if event_count >= 100:
             reasons.append("A high request volume was correlated in a short window.")
             mitre.append({"id": "T1498", "name": "Network Denial of Service"})
+
+    elif event_type.startswith("opnsense.firewall_"):
+        action = str(event.get("firewall_action") or "").lower()
+        direction = str(event.get("firewall_direction") or "").lower()
+        protocol = str(event.get("protocol") or "").lower()
+        dst_port = event.get("dst_port")
+        web_ports = {80, 443, 8000, 8080, 8443}
+        if event_count >= 100 and protocol == "tcp" and dst_port in web_ports:
+            severity = "high"
+            confidence = min(0.96, 0.72 + event_count * 0.001)
+            title_override = "Possible HTTP flood / DoS traffic"
+            description_override = (
+                f"{event_count} correlated OPNsense firewall events from "
+                f"{event.get('src_ip') or 'an unknown source'} to "
+                f"{event.get('dst_ip') or 'the WAN address'}:{dst_port} "
+                "were observed in the correlation window."
+            )
+            reasons.append(
+                "A high volume of TCP firewall events targeted a web-facing port "
+                "from the same source in a short time window."
+            )
+            if action in {"block", "reject"}:
+                reasons.append(
+                    "OPNsense blocked or rejected the traffic, indicating the firewall "
+                    "absorbed the flood attempt before it reached the protected service."
+                )
+            elif action == "pass":
+                reasons.append(
+                    "OPNsense allowed the traffic; validate web access logs and service "
+                    "health to determine impact."
+                )
+            if direction:
+                reasons.append(f"The firewall logged the traffic direction as {direction}.")
+            mitre.append({"id": "T1498", "name": "Network Denial of Service"})
+            recommendations.extend(
+                [
+                    "Confirm the traffic is an approved lab DoS test before taking action.",
+                    "Check OPNsense live log, firewall states and interface throughput.",
+                    "Review Apache access.log for matching HTTP requests and user agents.",
+                    "Rate-limit or block the source at OPNsense if the activity is not authorized.",
+                ]
+            )
+        elif action in {"block", "reject"} and event_count >= 20:
+            severity = "medium"
+            confidence = min(0.88, 0.55 + event_count * 0.01)
+            title_override = "Repeated firewall deny events"
+            reasons.append(
+                "Multiple blocked firewall events from the same source were correlated."
+            )
+            mitre.append({"id": "T1046", "name": "Network Service Discovery"})
+            recommendations.append(
+                "Check whether the source is a known scanner or approved test host."
+            )
 
     elif event_type == "windows.4625":
         severity = "high" if event_count >= 10 else ("medium" if event_count >= 3 else "low")
@@ -110,8 +165,8 @@ def triage_event(
     if not reasons:
         reasons.append("No high-confidence malicious indicator was found.")
 
-    title = event.get("title") or "Security event"
-    description = event.get("message") or title
+    title = title_override or event.get("title") or "Security event"
+    description = description_override or event.get("message") or title
     disposition = "escalate" if severity in {"high", "critical"} else "monitor"
     return {
         "severity": severity,

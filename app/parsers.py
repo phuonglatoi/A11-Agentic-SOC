@@ -16,6 +16,10 @@ SYSLOG_PREFIX = re.compile(
     r"^(?:<(?P<priority>\d+)>)?(?P<timestamp>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+"
     r"(?P<host>\S+)\s+(?P<program>[\w./-]+)(?:\[\d+\])?:\s*(?P<message>.*)$"
 )
+SYSLOG_PREFIX_NO_HOST = re.compile(
+    r"^(?:<(?P<priority>\d+)>)?(?P<timestamp>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+"
+    r"(?P<program>[\w./-]+)(?:\[\d+\])?:\s*(?P<message>.*)$"
+)
 SUSPICIOUS_PATH = re.compile(
     r"(?i)(?:\.\./|/\.env|/wp-admin|/phpmyadmin|/etc/passwd|union(?:\s+all)?\s+select|<script|cmd=|powershell)"
 )
@@ -61,6 +65,8 @@ def _parse_text(raw: str) -> dict[str, Any]:
         return parsed
 
     syslog = SYSLOG_PREFIX.match(stripped)
+    if not syslog:
+        syslog = SYSLOG_PREFIX_NO_HOST.match(stripped)
     if syslog:
         parsed = syslog.groupdict()
         parsed["_format"] = "syslog"
@@ -89,6 +95,49 @@ def _suricata(data: dict[str, Any]) -> dict[str, Any]:
         "category": category,
         "sensor_severity": _as_int(alert.get("severity")),
         "host": data.get("host"),
+    }
+
+
+def _opnsense_filterlog(data: dict[str, Any]) -> dict[str, Any]:
+    message = str(data.get("message") or "")
+    fields = [item.strip() for item in message.split(",")]
+    action = fields[6].lower() if len(fields) > 6 else ""
+    direction = fields[7].lower() if len(fields) > 7 else ""
+    protocol = fields[16].lower() if len(fields) > 16 else ""
+    src_ip = fields[18] if len(fields) > 18 else None
+    dst_ip = fields[19] if len(fields) > 19 else None
+    src_port = _as_int(fields[20] if len(fields) > 20 else None)
+    dst_port = _as_int(fields[21] if len(fields) > 21 else None)
+    interface = fields[4] if len(fields) > 4 else data.get("interface")
+
+    if action in {"block", "reject"}:
+        event_type = "opnsense.firewall_block"
+        verb = "blocked"
+    elif action == "pass":
+        event_type = "opnsense.firewall_pass"
+        verb = "allowed"
+    else:
+        event_type = "opnsense.firewall_event"
+        verb = "observed"
+
+    title_protocol = protocol.upper() if protocol else "network"
+    return {
+        "source": "opnsense",
+        "timestamp": _timestamp(data.get("timestamp")),
+        "event_type": event_type,
+        "title": f"OPNsense firewall {verb} {title_protocol} traffic",
+        "message": message,
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "src_port": src_port,
+        "dst_port": dst_port,
+        "protocol": protocol.upper() if protocol else None,
+        "host": data.get("host") or "opnsense",
+        "program": data.get("program"),
+        "interface": interface,
+        "firewall_action": action or None,
+        "firewall_direction": direction or None,
+        "filterlog_fields": fields,
     }
 
 
@@ -197,6 +246,8 @@ def normalize_event(
         data.get("event_type") or "suricata" in source_text or "eve" in source_text
     ):
         normalized = _suricata(data)
+    elif data.get("_format") == "syslog" and data.get("program") == "filterlog":
+        normalized = _opnsense_filterlog(data)
     elif any(word in source_text for word in ("apache", "access_combined", "httpd")):
         normalized = _apache(data)
     elif data.get("_format") == "apache" or {"method", "path", "status"} <= data.keys():
