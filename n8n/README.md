@@ -51,6 +51,10 @@ Import the workflow from the mounted path:
 /workflows/a11_soc_local_automation.json
 ```
 
+After `git pull`, re-import this file or delete the old workflow and import it
+again. n8n stores imported workflows in its own database, so changing the JSON
+file in Git does not automatically update an already imported workflow.
+
 Activate the workflow in the n8n UI. Then edit `.env` and set:
 
 ```env
@@ -77,6 +81,9 @@ http://127.0.0.1:5678/webhook/a11-soc-response
 Do not use `/webhook-test/...` for the final demo. Test URLs are temporary and
 only exist while the editor is explicitly waiting for a test event. Production
 executions do not animate on the canvas; check `n8n -> Executions` instead.
+The webhook nodes use n8n's immediate response mode, so `curl` receives HTTP
+200 as soon as the workflow accepts the event. Audit and email side effects may
+appear a few seconds later.
 
 Fast host-side smoke test:
 

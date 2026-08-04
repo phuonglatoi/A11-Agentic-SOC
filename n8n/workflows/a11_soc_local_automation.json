@@ -5,8 +5,10 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "a11-soc-alert",
-        "responseMode": "responseNode",
-        "options": {}
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": 200
+        }
       },
       "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf001",
       "name": "SOC Alert Webhook",
@@ -62,31 +64,17 @@
       "position": [
         -240,
         -340
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{JSON.stringify($json.response)}}",
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf004",
-      "name": "Respond Alert Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        -240,
-        -140
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "a11-soc-response",
-        "responseMode": "responseNode",
-        "options": {}
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": 200
+        }
       },
       "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf005",
       "name": "SOC Response Webhook",
@@ -142,24 +130,8 @@
       "position": [
         -240,
         120
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{JSON.stringify($json.response)}}",
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "id": "7f58f8d6-9e98-464c-8cfb-14d6217cf008",
-      "name": "Respond Response Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        -240,
-        320
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -238,11 +210,6 @@
       "main": [
         [
           {
-            "node": "Respond Alert Webhook",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "Write Alert Audit to A11 SOC",
             "type": "main",
             "index": 0
@@ -269,11 +236,6 @@
     "Build Response Action Payload": {
       "main": [
         [
-          {
-            "node": "Respond Response Webhook",
-            "type": "main",
-            "index": 0
-          },
           {
             "node": "Write Response Audit to A11 SOC",
             "type": "main",

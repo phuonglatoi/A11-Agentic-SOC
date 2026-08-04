@@ -69,6 +69,11 @@ Open n8n and import:
 /workflows/a11_soc_local_automation.json
 ```
 
+If you already imported an older workflow before running `git pull`, import the
+file again or delete the old workflow and import the new one. n8n stores the
+workflow in its own database; it does not live-update from the mounted JSON
+file.
+
 Activate the workflow. The SOC container reaches n8n through Docker DNS using:
 
 ```text
@@ -95,6 +100,10 @@ Successful n8n evidence appears in two places:
 - `n8n -> Executions`
 - `A11 SOC -> Audit trail`, with `actor=n8n`
 - `Mailpit -> Inbox`, with an `[A11 SOC]` alert email
+
+The webhook returns HTTP 200 immediately when n8n accepts the event. The email
+and audit callback are side effects that can appear a few seconds later, so use
+`bash scripts/test_n8n_webhooks.sh` for the cleanest verification.
 
 The n8n workflow performs its own lightweight attack classification before
 sending email. The email subject contains the n8n-stage attack type, for

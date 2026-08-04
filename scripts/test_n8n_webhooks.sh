@@ -17,8 +17,13 @@ MAILPIT_URL="${MAILPIT_URL:-http://127.0.0.1:${MAILPIT_UI_PORT:-8025}}"
 SOC_ADMIN_TOKEN="${SOC_ADMIN_TOKEN:-$(env_value SOC_ADMIN_TOKEN)}"
 SOC_ADMIN_TOKEN="${SOC_ADMIN_TOKEN:-a11-admin-token-123456}"
 
-alert_payload='{"alert_id":"n8n-smoke-alert","severity":"high","title":"n8n production webhook smoke test","description":"Controlled GoldenEye-like HTTP flood smoke test","attack_type":"http_flood_dos","confidence":0.96,"src_ip":"192.168.228.128","dst_ip":"192.168.228.142","dst_port":80,"event_type":"opnsense.firewall_block","mitre":[{"id":"T1498","name":"Network Denial of Service"}],"reasons":["Smoke test validates n8n attack analysis and email notification."],"recommendations":["Open Mailpit and verify the generated alert email."]}'
-response_payload='{"action_type":"notify_soc","target":"soc-analyst","payload":{"alert_id":"n8n-smoke-response","severity":"high","title":"n8n response webhook smoke test","attack_type":"http_flood_dos","src_ip":"192.168.228.128"}}'
+SMOKE_ID="n8n-smoke-$(date +%s)"
+ALERT_ID="${SMOKE_ID}-alert"
+RESPONSE_ID="${SMOKE_ID}-response"
+SMOKE_TITLE="n8n production webhook smoke test ${SMOKE_ID}"
+
+alert_payload="{\"alert_id\":\"${ALERT_ID}\",\"severity\":\"high\",\"title\":\"${SMOKE_TITLE}\",\"description\":\"Controlled GoldenEye-like HTTP flood smoke test\",\"attack_type\":\"http_flood_dos\",\"confidence\":0.96,\"src_ip\":\"192.168.228.128\",\"dst_ip\":\"192.168.228.142\",\"dst_port\":80,\"event_type\":\"opnsense.firewall_block\",\"mitre\":[{\"id\":\"T1498\",\"name\":\"Network Denial of Service\"}],\"reasons\":[\"Smoke test validates n8n attack analysis and email notification.\"],\"recommendations\":[\"Open Mailpit and verify the generated alert email.\"]}"
+response_payload="{\"action_type\":\"notify_soc\",\"target\":\"soc-analyst\",\"payload\":{\"alert_id\":\"${RESPONSE_ID}\",\"severity\":\"high\",\"title\":\"n8n response webhook smoke test ${SMOKE_ID}\",\"attack_type\":\"http_flood_dos\",\"src_ip\":\"192.168.228.128\"}}"
 
 echo "[1/6] Checking A11 SOC API..."
 if ! curl -fsS -m 5 "$SOC_URL/health" >/tmp/a11_soc_health.json; then
@@ -71,21 +76,41 @@ if ! printf '%s' "$response_response" | grep -q 'HTTP_STATUS:200'; then
 fi
 
 echo "[6/6] Checking A11 SOC audit callback and Mailpit email from n8n..."
-audit_response="$(curl -fsS -m 10 "$SOC_URL/api/v1/audit?limit=20" \
-  -H "Authorization: Bearer $SOC_ADMIN_TOKEN" || true)"
-if printf '%s' "$audit_response" | grep -q '"actor":"n8n"'; then
-  echo "OK: A11 SOC audit contains actor=n8n."
-  echo "n8n production automation is working end-to-end."
+audit_found=0
+mail_found=0
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  audit_response="$(curl -fsS -m 10 "$SOC_URL/api/v1/audit?limit=30" \
+    -H "Authorization: Bearer $SOC_ADMIN_TOKEN" || true)"
+  mail_response="$(curl -fsS -m 10 "$MAILPIT_URL/api/v1/messages?limit=30" || true)"
+  if printf '%s' "$audit_response" | grep -q "$ALERT_ID"; then
+    audit_found=1
+  fi
+  if printf '%s' "$mail_response" | grep -qi "$SMOKE_TITLE"; then
+    mail_found=1
+  fi
+  if [ "$audit_found" = "1" ] && [ "$mail_found" = "1" ]; then
+    break
+  fi
+  sleep 1
+done
+
+if [ "$audit_found" = "1" ]; then
+  echo "OK: A11 SOC audit contains the n8n smoke alert $ALERT_ID."
 else
-  echo "WARN: webhook returned 200, but actor=n8n was not found in the latest audit rows."
+  echo "WARN: webhook returned 200, but $ALERT_ID was not found in the latest audit rows."
   echo "Check SOC_ADMIN_TOKEN, n8n env A11_SOC_ADMIN_TOKEN, and n8n Executions."
 fi
 
-mail_response="$(curl -fsS -m 10 "$MAILPIT_URL/api/v1/messages?limit=20" || true)"
-if printf '%s' "$mail_response" | grep -qi 'n8n production webhook smoke test'; then
-  echo "OK: Mailpit contains the generated alert email."
+if [ "$mail_found" = "1" ]; then
+  echo "OK: Mailpit contains the generated alert email for $SMOKE_TITLE."
   echo "Open $MAILPIT_URL and capture the email notification for the report."
 else
   echo "WARN: webhook returned 200, but the expected email was not found in Mailpit."
   echo "Open n8n -> Executions and inspect 'Send Alert Email to Mailpit'."
 fi
+
+if [ "$audit_found" != "1" ] || [ "$mail_found" != "1" ]; then
+  exit 1
+fi
+
+echo "n8n production automation is working end-to-end."
