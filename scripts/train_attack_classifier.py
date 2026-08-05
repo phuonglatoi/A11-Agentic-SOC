@@ -35,7 +35,7 @@ LABEL_METADATA: dict[str, dict[str, Any]] = {
         "mitre": [],
     },
     "network_scan": {
-        "severity": "medium",
+        "severity": "high",
         "title": "Network scan / reconnaissance",
         "description": "The ML model detected behavior similar to port scan, OS scan or vulnerability scan telemetry.",
         "mitre": [

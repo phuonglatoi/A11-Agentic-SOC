@@ -41,3 +41,28 @@ def test_ml_prediction_is_used_by_triage_for_sqlmap():
     assert triage["severity"] == "high"
     assert any(item["id"] == "T1190" for item in triage["mitre"])
     assert any("ML Detection Agent predicted" in reason for reason in triage["reasons"])
+
+
+def test_high_confidence_opnsense_network_scan_ml_escalates_to_high():
+    event = normalize_event(
+        "<134>Jul 30 08:49:24 filterlog: "
+        "69,,,0,em1,match,block,in,4,0x0,,64,12345,0,DF,6,tcp,60,"
+        "192.168.228.128,192.168.228.142,52411,22,0,S,1234567890,,64240,,mss",
+        source_hint="syslog",
+    )
+    event["ml_prediction"] = {
+        "enabled": True,
+        "status": "ok",
+        "attack_type": "network_scan",
+        "confidence": 0.79,
+        "severity": "medium",
+        "mitre": [
+            {"id": "T1046", "name": "Network Service Discovery"},
+            {"id": "T1595.002", "name": "Vulnerability Scanning"},
+        ],
+    }
+
+    triage = triage_event(event, event_count=3)
+
+    assert triage["severity"] == "high"
+    assert "network scan" in triage["title"].lower()
