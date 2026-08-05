@@ -160,6 +160,7 @@ async function connectStream() {
 }
 
 function render() {
+  $("#bootNotice")?.classList.add("hidden");
   renderRuntime();
   renderStats();
   renderAlerts();

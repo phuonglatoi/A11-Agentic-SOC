@@ -1204,3 +1204,120 @@ tbody tr:hover td {
     grid-template-columns: 1fr;
   }
 }
+
+/* Stability override: keep the dashboard body visible even when older cached
+   styles or partial API failures are present in the browser. */
+body::before {
+  z-index: -1;
+}
+
+main {
+  display: block !important;
+  position: relative !important;
+  z-index: 20 !important;
+  min-height: 100vh;
+  margin-left: calc(var(--sidebar) + 14px) !important;
+  padding: 22px 32px 64px !important;
+  color: var(--text) !important;
+}
+
+.topbar {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 25 !important;
+  min-height: 92px;
+  padding: 10px 0 18px;
+  margin-bottom: 16px;
+}
+
+.view.active,
+.view.active > * {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.hero-grid,
+.metrics,
+.overview-grid,
+.route-grid,
+.flow-lane {
+  display: grid !important;
+}
+
+.lab-flow,
+.automation-map,
+.view.active > article.panel {
+  display: block !important;
+}
+
+.view.active {
+  display: block !important;
+  min-height: 60vh;
+}
+
+.panel,
+.metric,
+.flow-card,
+.route-card {
+  isolation: isolate;
+}
+
+.panel::before,
+.metric::before,
+.route-card::before {
+  z-index: -1;
+}
+
+.boot-notice {
+  position: fixed;
+  left: calc(var(--sidebar) + 48px);
+  top: 132px;
+  z-index: 60;
+  display: grid;
+  gap: 6px;
+  width: min(520px, calc(100vw - var(--sidebar) - 80px));
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(64,230,255,.26);
+  background:
+    radial-gradient(circle at 92% 10%, rgba(64,230,255,.16), transparent 30%),
+    linear-gradient(145deg, rgba(14,29,47,.96), rgba(5,12,23,.96));
+  box-shadow: 0 22px 70px rgba(0,0,0,.44);
+  color: #dff8ff;
+}
+
+.boot-notice strong {
+  font-size: 15px;
+}
+
+.boot-notice span {
+  color: #a9c0cc;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  main {
+    margin-left: calc(var(--sidebar) + 10px) !important;
+  }
+
+  .boot-notice {
+    left: calc(var(--sidebar) + 28px);
+    width: min(520px, calc(100vw - var(--sidebar) - 52px));
+  }
+}
+
+@media (max-width: 740px) {
+  main {
+    margin-left: 0 !important;
+    padding: 14px 14px 88px !important;
+  }
+
+  .boot-notice {
+    left: 14px;
+    right: 14px;
+    width: auto;
+  }
+}
