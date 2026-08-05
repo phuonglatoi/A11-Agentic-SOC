@@ -64,7 +64,23 @@ def test_opnsense_filterlog_http_flood_is_high():
     assert event["dst_ip"] == "192.168.228.142"
     assert event["dst_port"] == 80
 
-    triage = triage_event(event, event_count=968)
+    triage = triage_event(event, event_count=75)
     assert triage["severity"] == "high"
     assert "HTTP flood" in triage["title"]
     assert triage["mitre"][0]["id"] == "T1498"
+
+
+def test_opnsense_repeated_tcp_deny_is_high_reconnaissance():
+    event = normalize_event(
+        "<134>Jul 30 08:49:24 filterlog: "
+        "69,,,0,em1,match,block,in,4,0x0,,64,12345,0,DF,6,tcp,60,"
+        "192.168.228.128,192.168.228.142,52411,22,0,S,1234567890,,64240,,mss",
+        source_hint="syslog",
+    )
+
+    triage = triage_event(event, event_count=35)
+
+    assert triage["severity"] == "high"
+    assert "network scan" in triage["title"].lower()
+    assert any(item["id"] == "T1046" for item in triage["mitre"])
+    assert any(item["id"] == "T1595.002" for item in triage["mitre"])

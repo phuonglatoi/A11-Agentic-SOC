@@ -324,7 +324,7 @@ python3 goldeneye.py http://192.168.228.142 -s 100 -w 10
 ```
 
 The SOC detects the firewall side of this test from OPNsense `filterlog` syslog.
-When the same source creates at least 100 correlated TCP events against a web
+When the same source creates at least 50 correlated TCP events against a web
 port (`80`, `443`, `8000`, `8080`, `8443`) inside the correlation window, the
 triage agent raises:
 
@@ -333,6 +333,11 @@ Possible HTTP flood / DoS traffic
 Severity: High
 MITRE: T1498 Network Denial of Service
 ```
+
+For blocked TCP reconnaissance, the triage agent raises `Probable network scan /
+reconnaissance` as high severity after roughly 30 correlated denied TCP events
+from the same source. This makes short Kali `nmap` demos easier to observe while
+still requiring repeated firewall evidence rather than a single blocked packet.
 
 For the richest evidence, also ship Apache `access.log` as described above. The
 firewall log proves the network flood; the access log proves the HTTP path and

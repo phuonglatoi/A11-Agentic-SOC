@@ -87,9 +87,9 @@ def triage_event(
         protocol = str(event.get("protocol") or "").lower()
         dst_port = event.get("dst_port")
         web_ports = {80, 443, 8000, 8080, 8443}
-        if event_count >= 100 and protocol == "tcp" and dst_port in web_ports:
+        if event_count >= 50 and protocol == "tcp" and dst_port in web_ports:
             severity = "high"
-            confidence = min(0.96, 0.72 + event_count * 0.001)
+            confidence = min(0.96, 0.74 + event_count * 0.002)
             title_override = "Possible HTTP flood / DoS traffic"
             description_override = (
                 f"{event_count} correlated OPNsense firewall events from "
@@ -122,7 +122,36 @@ def triage_event(
                     "Rate-limit or block the source at OPNsense if the activity is not authorized.",
                 ]
             )
-        elif action in {"block", "reject"} and event_count >= 20:
+        elif action in {"block", "reject"} and protocol == "tcp" and event_count >= 30:
+            severity = "high"
+            confidence = min(0.94, 0.68 + event_count * 0.004)
+            title_override = "Probable network scan / reconnaissance"
+            description_override = (
+                f"{event_count} denied TCP firewall events from "
+                f"{event.get('src_ip') or 'an unknown source'} to "
+                f"{event.get('dst_ip') or 'the protected network'} "
+                "were correlated in the analysis window."
+            )
+            reasons.append(
+                "Repeated denied TCP firewall events from the same source indicate "
+                "port scan, service discovery, or vulnerability scanning activity."
+            )
+            if dst_port:
+                reasons.append(f"The current correlated destination port is {dst_port}.")
+            mitre.extend(
+                [
+                    {"id": "T1046", "name": "Network Service Discovery"},
+                    {"id": "T1595.002", "name": "Vulnerability Scanning"},
+                ]
+            )
+            recommendations.extend(
+                [
+                    "Confirm whether the source is the authorized Kali lab scanner.",
+                    "Review OPNsense live firewall logs for the full destination port spread.",
+                    "If unauthorized, block or rate-limit the source after analyst approval.",
+                ]
+            )
+        elif action in {"block", "reject"} and event_count >= 10:
             severity = "medium"
             confidence = min(0.88, 0.55 + event_count * 0.01)
             title_override = "Repeated firewall deny events"

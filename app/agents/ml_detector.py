@@ -33,7 +33,7 @@ def event_to_text(event: dict[str, Any], event_count: int = 1) -> str:
     elif raw:
         parts.append(str(raw))
     parts.append(f"event_count:{event_count}")
-    if event_count >= 100:
+    if event_count >= 50:
         parts.append("event_volume:high")
     elif event_count >= 20:
         parts.append("event_volume:medium")
@@ -43,7 +43,7 @@ def event_to_text(event: dict[str, Any], event_count: int = 1) -> str:
     web_ports = {80, 443, 8000, 8080, 8443}
     if (
         event_type.startswith("opnsense.firewall_")
-        and event_count >= 100
+        and event_count >= 50
         and protocol == "tcp"
         and dst_port in web_ports
     ):

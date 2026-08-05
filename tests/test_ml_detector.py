@@ -14,7 +14,7 @@ def test_ml_agent_detects_opnsense_http_flood():
         source_hint="syslog",
     )
 
-    prediction = agent.detect(event, event_count=968)
+    prediction = agent.detect(event, event_count=75)
 
     assert prediction["enabled"] is True
     assert prediction["attack_type"] == "http_flood_dos"
