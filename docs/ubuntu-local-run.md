@@ -74,6 +74,11 @@ file again or delete the old workflow and import the new one. n8n stores the
 workflow in its own database; it does not live-update from the mounted JSON
 file.
 
+If n8n execution fails at `Build Alert Automation Payload` with `access to env
+vars denied`, rebuild the n8n container and re-import the workflow. The Compose
+file sets `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, and the current workflow avoids
+using `$env` inside Code nodes for maximum compatibility.
+
 Activate the workflow. The SOC container reaches n8n through Docker DNS using:
 
 ```text

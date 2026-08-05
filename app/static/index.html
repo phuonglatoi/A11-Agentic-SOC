@@ -94,6 +94,42 @@
         </article>
       </div>
 
+      <article class="panel lab-flow">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">LAB EVIDENCE FLOW</p>
+            <h2>Real-time SOC data path</h2>
+          </div>
+          <span class="report-chip">REPORT READY</span>
+        </div>
+        <div class="flow-lane" aria-label="Luồng dữ liệu SOC">
+          <div class="flow-card">
+            <i>01</i>
+            <span>Attack source</span>
+            <strong>Kali / Lab client</strong>
+            <small>192.168.228.128 → WAN target</small>
+          </div>
+          <div class="flow-card">
+            <i>02</i>
+            <span>Firewall telemetry</span>
+            <strong>OPNsense filterlog</strong>
+            <small>Syslog UDP 514 / 5514</small>
+          </div>
+          <div class="flow-card accent">
+            <i>03</i>
+            <span>A11 processing</span>
+            <strong>Normalize → ML/RAG → Triage</strong>
+            <small>REST/HEC TCP 8000 + local pipeline</small>
+          </div>
+          <div class="flow-card">
+            <i>04</i>
+            <span>Automation</span>
+            <strong>n8n + Mailpit</strong>
+            <small>Webhook 5678 → Email 8025</small>
+          </div>
+        </div>
+      </article>
+
       <div class="overview-grid">
         <article class="panel signal-panel">
           <div class="panel-head">

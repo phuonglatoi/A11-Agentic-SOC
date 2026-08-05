@@ -3,6 +3,7 @@ from pathlib import Path
 
 
 WORKFLOW_PATH = Path(__file__).resolve().parents[1] / "n8n" / "workflows" / "a11_soc_local_automation.json"
+COMPOSE_PATH = Path(__file__).resolve().parents[1] / "docker-compose.yml"
 
 
 def load_workflow():
@@ -58,3 +59,18 @@ def test_n8n_side_effect_nodes_do_not_block_the_webhook():
     ]
     for name in side_effect_nodes:
         assert nodes[name]["continueOnFail"] is True
+
+
+def test_n8n_code_nodes_do_not_depend_on_env_access():
+    workflow = load_workflow()
+    nodes = nodes_by_name(workflow)
+
+    for name in ["Build Alert Automation Payload", "Build Response Action Payload"]:
+        assert "$env." not in nodes[name]["parameters"]["jsCode"]
+
+
+def test_n8n_compose_allows_env_access_for_local_lab_compatibility():
+    compose_text = COMPOSE_PATH.read_text(encoding="utf-8")
+
+    assert "N8N_BLOCK_ENV_ACCESS_IN_NODE" in compose_text
+    assert 'N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"' in compose_text

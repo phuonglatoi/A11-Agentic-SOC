@@ -55,6 +55,11 @@ After `git pull`, re-import this file or delete the old workflow and import it
 again. n8n stores imported workflows in its own database, so changing the JSON
 file in Git does not automatically update an already imported workflow.
 
+Recent n8n versions can block environment access inside Code nodes. This
+project sets `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` in `docker-compose.yml` and
+keeps the workflow Code nodes independent from `$env`, so the lab workflow can
+run reliably after a rebuild and re-import.
+
 Activate the workflow in the n8n UI. Then edit `.env` and set:
 
 ```env
@@ -113,9 +118,13 @@ a11-soc-alert
 a11-soc-response
 ```
 
-If the script returns 500 or times out, n8n received the webhook but a later
-node failed. Open `n8n -> Executions`, click the failed execution and inspect
-`Write Alert Audit to A11 SOC` or `Write Response Audit to A11 SOC`.
+If the script returns 500 or a node shows `access to env vars denied`, n8n is
+still running an old workflow or an old container environment. Run
+`docker compose --profile automation up -d --build n8n`, then delete/re-import
+`/workflows/a11_soc_local_automation.json` and publish it again. For other
+execution errors, open `n8n -> Executions`, click the failed execution and
+inspect `Write Alert Audit to A11 SOC`, `Send Alert Email to Mailpit`, or the
+matching response nodes.
 
 ```bash
 docker compose exec api python - <<'PY'
