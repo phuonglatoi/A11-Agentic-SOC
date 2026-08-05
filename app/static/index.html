@@ -130,6 +130,33 @@
         </div>
       </article>
 
+      <article class="panel automation-map">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">AUTOMATION ROUTING</p>
+            <h2>When n8n is triggered</h2>
+          </div>
+          <span class="live-tag"><i></i> WEBHOOK READY</span>
+        </div>
+        <div class="route-grid">
+          <div class="route-card hot">
+            <span>HIGH / CRITICAL alert</span>
+            <strong>A11 creates notify_soc</strong>
+            <small>A11 → n8n /webhook/a11-soc-alert → Mailpit alert email</small>
+          </div>
+          <div class="route-card">
+            <span>Analyst approval</span>
+            <strong>Response action executes</strong>
+            <small>A11 → n8n /webhook/a11-soc-response → audit + response email</small>
+          </div>
+          <div class="route-card quiet">
+            <span>LOW / MEDIUM alert</span>
+            <strong>Monitor only</strong>
+            <small>Stored in Alert queue; no n8n alert notification is sent.</small>
+          </div>
+        </div>
+      </article>
+
       <div class="overview-grid">
         <article class="panel signal-panel">
           <div class="panel-head">

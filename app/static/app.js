@@ -44,7 +44,7 @@ async function api(path, options = {}) {
   try {
     const response = await fetch(path, { ...options, headers, signal: controller.signal });
     if (response.status === 401) {
-      lockConsole("Token kh?ng h?p l? ho?c ?? thay ??i.");
+      lockConsole("Token không hợp lệ hoặc đã thay đổi.");
       throw new Error("Unauthorized");
     }
     if (!response.ok) {
@@ -55,7 +55,7 @@ async function api(path, options = {}) {
     return contentType.includes("application/json") ? response.json() : response.text();
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("A11 SOC API ph?n h?i qu? l?u. Ki?m tra docker compose logs --tail=80 api.");
+      throw new Error("A11 SOC API phản hồi quá lâu. Kiểm tra docker compose logs --tail=80 api.");
     }
     throw error;
   } finally {
