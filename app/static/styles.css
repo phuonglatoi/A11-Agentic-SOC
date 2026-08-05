@@ -1506,3 +1506,104 @@ main {
     width: auto;
   }
 }
+
+/* Final fixed-viewport layout: the page itself never drifts; only the
+   dashboard content pane scrolls. This removes the large blank top area. */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden !important;
+}
+
+body {
+  margin: 0 !important;
+}
+
+.sidebar {
+  position: fixed !important;
+  left: 12px !important;
+  top: 12px !important;
+  bottom: 12px !important;
+  height: auto !important;
+  margin: 0 !important;
+}
+
+main {
+  position: fixed !important;
+  inset: 0 0 0 calc(var(--sidebar) + 24px) !important;
+  width: auto !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 14px 26px 42px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.topbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 80 !important;
+  min-height: 68px !important;
+  padding: 8px 0 12px !important;
+  margin: 0 0 12px !important;
+  border-bottom: 1px solid rgba(141,199,235,.14);
+  background:
+    linear-gradient(180deg, rgba(3,7,17,.98), rgba(3,7,17,.9) 68%, rgba(3,7,17,.72));
+  backdrop-filter: blur(18px);
+}
+
+.view.active {
+  padding-bottom: 34px;
+}
+
+.toast-stack {
+  z-index: 120 !important;
+}
+
+.boot-notice {
+  position: absolute !important;
+  left: 26px !important;
+  top: 92px !important;
+}
+
+@media (max-width: 1100px) {
+  .sidebar {
+    left: 10px !important;
+    top: 10px !important;
+    bottom: 10px !important;
+  }
+
+  main {
+    inset: 0 0 0 calc(var(--sidebar) + 20px) !important;
+    padding: 12px 18px 38px !important;
+  }
+}
+
+@media (max-width: 740px) {
+  html,
+  body {
+    overflow: hidden !important;
+  }
+
+  .sidebar {
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 66px !important;
+  }
+
+  main {
+    inset: 0 0 66px 0 !important;
+    padding: 10px 14px 28px !important;
+  }
+
+  .topbar {
+    position: sticky !important;
+  }
+}
