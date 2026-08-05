@@ -11,7 +11,7 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
-const toastState = { last: new Map(), maxVisible: 3 };
+const toastState = { last: new Map(), maxVisible: 2 };
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
 }[char]));
@@ -67,17 +67,18 @@ async function api(path, options = {}) {
 function toast(message, type = "") {
   const normalized = `${type}:${message}`;
   const now = Date.now();
-  if ((toastState.last.get(normalized) || 0) > now - 3500) return;
+  if ((toastState.last.get(normalized) || 0) > now - 6000) return;
   toastState.last.set(normalized, now);
   const item = document.createElement("div");
   item.className = `toast ${type}`;
-  item.textContent = message;
+  const compactMessage = String(message ?? "");
+  item.textContent = compactMessage.length > 118 ? `${compactMessage.slice(0, 115)}…` : compactMessage;
   $("#toastStack").append(item);
   const items = $$("#toastStack .toast");
   while (items.length > toastState.maxVisible) {
     items.shift().remove();
   }
-  setTimeout(() => item.remove(), type === "error" ? 5200 : 3200);
+  setTimeout(() => item.remove(), type === "error" ? 4800 : 2800);
 }
 
 function lockConsole(message = "") {
