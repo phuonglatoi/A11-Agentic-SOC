@@ -77,7 +77,13 @@ function lockConsole(message = "") {
   state.token = "";
   localStorage.removeItem("a11_soc_admin_token");
   $("#authError").textContent = message;
-  if (!$("#authDialog").open) $("#authDialog").showModal();
+  const dialog = $("#authDialog");
+  if (!dialog) return;
+  if (typeof dialog.showModal === "function") {
+    if (!dialog.open) dialog.showModal();
+  } else {
+    dialog.setAttribute("open", "");
+  }
 }
 
 async function authenticate(token) {
@@ -91,7 +97,7 @@ async function authenticate(token) {
     connectStream();
   } catch (error) {
     state.token = "";
-    $("#authError").textContent = "Không thể xác thực. Kiểm tra token và dịch vụ.";
+    lockConsole("Không thể xác thực. Kiểm tra token và dịch vụ.");
   }
 }
 
@@ -110,6 +116,7 @@ async function refreshAll(silent = false) {
     render();
     if (!silent) toast("Console synchronized", "success");
   } catch (error) {
+    render();
     if (error.message !== "Unauthorized") toast(error.message, "error");
   }
 }
@@ -134,7 +141,12 @@ async function connectStream() {
     $("#streamLabel").textContent = "Reconnecting";
   };
   state.stream.onmessage = async (message) => {
-    const event = JSON.parse(message.data);
+    let event;
+    try {
+      event = JSON.parse(message.data);
+    } catch {
+      return;
+    }
     if (event.type === "heartbeat") return;
     if (event.type === "alert") {
       const index = state.alerts.findIndex((item) => item.id === event.data.id);
@@ -379,5 +391,12 @@ $("#decisionForm").addEventListener("submit", (event) => { event.preventDefault(
 $$(".nav-item").forEach((button) => button.onclick = () => switchView(button.dataset.view));
 $$("[data-jump]").forEach((button) => button.onclick = () => switchView(button.dataset.jump));
 
-setInterval(() => { $("#clock").textContent = new Date().toLocaleTimeString("vi-VN"); }, 1000);
-if (state.token) authenticate(state.token); else lockConsole();
+function startDashboard() {
+  render();
+  setInterval(() => { $("#clock").textContent = new Date().toLocaleTimeString("vi-VN"); }, 1000);
+  $("#clock").textContent = new Date().toLocaleTimeString("vi-VN");
+  if (state.token) authenticate(state.token);
+  else lockConsole("Nhập SOC_ADMIN_TOKEN để mở dashboard.");
+}
+
+startDashboard();

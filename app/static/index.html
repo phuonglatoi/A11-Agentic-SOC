@@ -71,6 +71,29 @@
     <section id="warningBanner" class="warning-banner hidden"></section>
 
     <section class="view active" id="view-overview">
+      <div class="hero-grid">
+        <article class="panel hero-card">
+          <p class="eyebrow">LOCAL-FIRST CYBER DEFENSE</p>
+          <h2>A11 Agentic SOC Command Center</h2>
+          <p class="hero-copy">
+            Thu thập log thời gian thực từ OPNsense, chuẩn hóa sự kiện, phân tích bằng Rules + ML + RAG,
+            sau đó tự động mở incident và gọi n8n khi alert đạt mức HIGH/CRITICAL.
+          </p>
+          <div class="hero-badges">
+            <span>Syslog UDP 5514</span>
+            <span>REST/HEC TCP 8000</span>
+            <span>n8n Webhook 5678</span>
+            <span>Mailpit 8025</span>
+          </div>
+        </article>
+        <article class="panel network-card">
+          <div class="node attacker"><i></i><span>Kali</span><b>192.168.228.128</b></div>
+          <div class="node firewall"><i></i><span>OPNsense</span><b>WAN 192.168.228.142</b></div>
+          <div class="node soc"><i></i><span>A11 SOC</span><b>Ubuntu 192.168.1.10</b></div>
+          <div class="node auto"><i></i><span>n8n + Mailpit</span><b>Automation evidence</b></div>
+        </article>
+      </div>
+
       <div class="metrics">
         <article class="metric critical-border">
           <div class="metric-top"><span>CRITICAL SIGNALS</span><i>24H</i></div>
