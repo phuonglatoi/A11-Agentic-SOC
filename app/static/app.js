@@ -11,6 +11,7 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const toastState = { last: new Map(), maxVisible: 3 };
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
 }[char]));
@@ -64,11 +65,19 @@ async function api(path, options = {}) {
 }
 
 function toast(message, type = "") {
+  const normalized = `${type}:${message}`;
+  const now = Date.now();
+  if ((toastState.last.get(normalized) || 0) > now - 3500) return;
+  toastState.last.set(normalized, now);
   const item = document.createElement("div");
   item.className = `toast ${type}`;
   item.textContent = message;
   $("#toastStack").append(item);
-  setTimeout(() => item.remove(), 4200);
+  const items = $$("#toastStack .toast");
+  while (items.length > toastState.maxVisible) {
+    items.shift().remove();
+  }
+  setTimeout(() => item.remove(), type === "error" ? 5200 : 3200);
 }
 
 function lockConsole(message = "") {
@@ -93,7 +102,7 @@ async function authenticate(token) {
     localStorage.setItem("a11_soc_admin_token", token);
     $("#authDialog").close();
     $("#authError").textContent = "";
-    await refreshAll();
+    await refreshAll(true);
     connectStream();
   } catch (error) {
     state.token = "";
@@ -152,7 +161,10 @@ async function connectStream() {
       const index = state.alerts.findIndex((item) => item.id === event.data.id);
       if (index >= 0) state.alerts[index] = event.data;
       else state.alerts.unshift(event.data);
-      toast(`${event.data.severity.toUpperCase()} · ${event.data.title}`);
+      const severity = String(event.data.severity || "").toLowerCase();
+      if (["high", "critical"].includes(severity)) {
+        toast(`${event.data.severity.toUpperCase()} · ${event.data.title}`, severity);
+      }
       renderAlerts();
     }
     await refreshAll(true);
