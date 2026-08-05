@@ -54,7 +54,9 @@ class ResponseExecutor:
                 "message": "Notification recorded in the local action and audit log.",
             }
         try:
-            async with httpx.AsyncClient(timeout=20) as client:
+            async with httpx.AsyncClient(
+                timeout=self.settings.webhook_timeout_seconds
+            ) as client:
                 response = await client.post(
                     self.settings.notification_webhook_url, json=payload
                 )
@@ -73,7 +75,9 @@ class ResponseExecutor:
         if not self.settings.response_webhook_url:
             return {"ok": False, "mode": "webhook", "error": "Webhook URL is empty."}
         try:
-            async with httpx.AsyncClient(timeout=20) as client:
+            async with httpx.AsyncClient(
+                timeout=self.settings.webhook_timeout_seconds
+            ) as client:
                 response = await client.post(
                     self.settings.response_webhook_url,
                     json={

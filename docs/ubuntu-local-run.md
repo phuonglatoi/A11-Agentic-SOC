@@ -357,6 +357,39 @@ docker compose logs -f n8n
 curl http://127.0.0.1:8000/health
 ```
 
+If the dashboard keeps loading after a Kali flood or after pressing **Run lab
+scenario**, first check whether the API is busy with syslog backlog:
+
+```bash
+curl -m 10 http://127.0.0.1:8000/health
+docker compose logs --tail=80 api
+```
+
+The API now uses a bounded syslog queue so a log storm cannot create unlimited
+background tasks. The health response includes `syslog_queue.received`,
+`processed`, `dropped`, and `queue_size`. If the old container is still running,
+pull and rebuild:
+
+```bash
+git pull
+docker compose --profile automation up -d --build
+```
+
+For very small Ubuntu VMs, lower the ingest pressure or tune `.env`:
+
+```env
+SYSLOG_QUEUE_MAXSIZE=1000
+SYSLOG_WORKER_COUNT=1
+WEBHOOK_TIMEOUT_SECONDS=5
+```
+
+If the API is already stuck from a previous flood, restart only the API
+container:
+
+```bash
+docker compose restart api
+```
+
 If the API cannot start and the log contains `connection failed: server closed
 the connection unexpectedly`, wait for PostgreSQL to become healthy and restart
 the API:

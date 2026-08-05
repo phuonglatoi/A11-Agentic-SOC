@@ -32,23 +32,35 @@ function ago(value) {
 }
 
 async function api(path, options = {}) {
+  const timeoutMs = options.timeoutMs || 15000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const headers = { ...(options.headers || {}) };
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
   if (options.body && typeof options.body !== "string") {
     headers["Content-Type"] = "application/json";
     options.body = JSON.stringify(options.body);
   }
-  const response = await fetch(path, { ...options, headers });
-  if (response.status === 401) {
-    lockConsole("Token không hợp lệ hoặc đã thay đổi.");
-    throw new Error("Unauthorized");
+  try {
+    const response = await fetch(path, { ...options, headers, signal: controller.signal });
+    if (response.status === 401) {
+      lockConsole("Token kh?ng h?p l? ho?c ?? thay ??i.");
+      throw new Error("Unauthorized");
+    }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || "Request failed");
+    }
+    const contentType = response.headers.get("content-type") || "";
+    return contentType.includes("application/json") ? response.json() : response.text();
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("A11 SOC API ph?n h?i qu? l?u. Ki?m tra docker compose logs --tail=80 api.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || "Request failed");
-  }
-  const contentType = response.headers.get("content-type") || "";
-  return contentType.includes("application/json") ? response.json() : response.text();
 }
 
 function toast(message, type = "") {
@@ -151,7 +163,11 @@ function renderRuntime() {
     ? `${state.runtime.ollama_model.toUpperCase()} + ${ml ? "ML + " : ""}RAG`
     : `RULES + ${ml ? "ML + " : ""}RAG`;
   $("#responseMode").textContent = String(state.runtime.response_mode || "dry_run").toUpperCase();
-  $("#syslogStatus").textContent = state.runtime.syslog?.enabled ? `${state.runtime.syslog.port}/UDP` : "OFF";
+  const syslog = state.runtime.syslog || {};
+  const queue = syslog.queue || {};
+  $("#syslogStatus").textContent = syslog.enabled
+    ? `${syslog.port}/UDP · Q${queue.queue_size ?? 0} · D${queue.dropped ?? 0}`
+    : "OFF";
   const warnings = state.runtime.warnings || [];
   $("#warningBanner").classList.toggle("hidden", !warnings.length);
   $("#warningBanner").textContent = warnings.join(" ");
@@ -344,7 +360,7 @@ async function generateDemo() {
   const button = $("#demoButton");
   button.disabled = true; button.textContent = "Generating…";
   try {
-    const result = await api("/api/v1/demo/generate", { method: "POST" });
+    const result = await api("/api/v1/demo/generate", { method: "POST", timeoutMs: 20000 });
     toast(`${result.generated} synthetic lab events ingested`, "success");
     await refreshAll(true);
   } catch (error) { toast(error.message, "error"); }

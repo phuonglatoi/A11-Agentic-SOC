@@ -32,6 +32,7 @@ class Settings:
     response_mode: str = "dry_run"
     response_webhook_url: str = ""
     notification_webhook_url: str = ""
+    webhook_timeout_seconds: int = 5
     opnsense_url: str = ""
     opnsense_key: str = ""
     opnsense_secret: str = ""
@@ -41,6 +42,8 @@ class Settings:
     syslog_enabled: bool = True
     syslog_host: str = "0.0.0.0"
     syslog_port: int = 5514
+    syslog_queue_maxsize: int = 2000
+    syslog_worker_count: int = 2
     data_dir: Path = Path("data")
     knowledge_dir: Path = Path("knowledge")
     attack_model_path: Path = Path("models/attack_classifier.json")
@@ -68,6 +71,9 @@ class Settings:
             notification_webhook_url=os.getenv(
                 "NOTIFICATION_WEBHOOK_URL", defaults.notification_webhook_url
             ),
+            webhook_timeout_seconds=_int(
+                "WEBHOOK_TIMEOUT_SECONDS", defaults.webhook_timeout_seconds
+            ),
             opnsense_url=os.getenv("OPNSENSE_URL", defaults.opnsense_url),
             opnsense_key=os.getenv("OPNSENSE_KEY", defaults.opnsense_key),
             opnsense_secret=os.getenv("OPNSENSE_SECRET", defaults.opnsense_secret),
@@ -81,6 +87,12 @@ class Settings:
             syslog_enabled=_bool("SYSLOG_ENABLED", defaults.syslog_enabled),
             syslog_host=os.getenv("SYSLOG_HOST", defaults.syslog_host),
             syslog_port=_int("SYSLOG_PORT", defaults.syslog_port),
+            syslog_queue_maxsize=_int(
+                "SYSLOG_QUEUE_MAXSIZE", defaults.syslog_queue_maxsize
+            ),
+            syslog_worker_count=max(
+                1, _int("SYSLOG_WORKER_COUNT", defaults.syslog_worker_count)
+            ),
             data_dir=Path(os.getenv("DATA_DIR", str(defaults.data_dir))),
             knowledge_dir=Path(
                 os.getenv("KNOWLEDGE_DIR", str(defaults.knowledge_dir))

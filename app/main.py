@@ -81,16 +81,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         database.initialize()
         app.state.syslog_transport = None
+        app.state.syslog_protocol = None
         for warning in settings.validate_safety():
             logger.warning(warning)
         if settings.syslog_enabled:
             try:
                 loop = asyncio.get_running_loop()
+                protocol = SyslogProtocol(
+                    database,
+                    pipeline,
+                    queue_maxsize=settings.syslog_queue_maxsize,
+                    worker_count=settings.syslog_worker_count,
+                )
                 transport, _ = await loop.create_datagram_endpoint(
-                    lambda: SyslogProtocol(database, pipeline),
+                    lambda: protocol,
                     local_addr=(settings.syslog_host, settings.syslog_port),
                 )
                 app.state.syslog_transport = transport
+                app.state.syslog_protocol = protocol
                 logger.info(
                     "Syslog UDP collector listening on %s:%s",
                     settings.syslog_host,
@@ -124,16 +132,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health() -> dict[str, Any]:
+        syslog_protocol = getattr(app.state, "syslog_protocol", None)
         return {
             "status": "ok",
             "service": settings.app_name,
             "response_mode": settings.response_mode,
             "ollama_enabled": settings.ollama_enabled,
+            "syslog_queue": syslog_protocol.stats() if syslog_protocol else None,
             "warnings": settings.validate_safety(),
         }
 
     @app.get("/api/v1/runtime", dependencies=[Depends(require_admin)])
     def runtime() -> dict[str, Any]:
+        syslog_protocol = getattr(app.state, "syslog_protocol", None)
         return {
             "environment": settings.environment,
             "response_mode": settings.response_mode,
@@ -143,6 +154,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "enabled": settings.syslog_enabled,
                 "host": settings.syslog_host,
                 "port": settings.syslog_port,
+                "queue": syslog_protocol.stats() if syslog_protocol else None,
             },
             "knowledge": pipeline.knowledge.stats(),
             "ml_detector": pipeline.ml_detector.stats(),
