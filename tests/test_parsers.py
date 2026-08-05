@@ -78,7 +78,7 @@ def test_opnsense_repeated_tcp_deny_is_high_reconnaissance():
         source_hint="syslog",
     )
 
-    triage = triage_event(event, event_count=35)
+    triage = triage_event(event, event_count=25)
 
     assert triage["severity"] == "high"
     assert "network scan" in triage["title"].lower()

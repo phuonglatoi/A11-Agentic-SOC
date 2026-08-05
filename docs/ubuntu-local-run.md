@@ -340,7 +340,7 @@ MITRE: T1498 Network Denial of Service
 ```
 
 For blocked TCP reconnaissance, the triage agent raises `Probable network scan /
-reconnaissance` as high severity after roughly 30 correlated denied TCP events
+reconnaissance` as high severity after roughly 20 correlated denied TCP events
 from the same source. This makes short Kali `nmap` demos easier to observe while
 still requiring repeated firewall evidence rather than a single blocked packet.
 

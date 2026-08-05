@@ -122,7 +122,7 @@ def triage_event(
                     "Rate-limit or block the source at OPNsense if the activity is not authorized.",
                 ]
             )
-        elif action in {"block", "reject"} and protocol == "tcp" and event_count >= 30:
+        elif action in {"block", "reject"} and protocol == "tcp" and event_count >= 20:
             severity = "high"
             confidence = min(0.94, 0.68 + event_count * 0.004)
             title_override = "Probable network scan / reconnaissance"
@@ -151,7 +151,7 @@ def triage_event(
                     "If unauthorized, block or rate-limit the source after analyst approval.",
                 ]
             )
-        elif action in {"block", "reject"} and event_count >= 10:
+        elif action in {"block", "reject"} and event_count >= 8:
             severity = "medium"
             confidence = min(0.88, 0.55 + event_count * 0.01)
             title_override = "Repeated firewall deny events"

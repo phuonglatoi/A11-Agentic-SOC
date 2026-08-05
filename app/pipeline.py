@@ -12,7 +12,7 @@ from app.agents.ml_detector import MLDetectionAgent
 from app.agents.rag import LocalKnowledgeBase
 from app.agents.report import build_report
 from app.agents.response import propose_actions
-from app.agents.triage import SEVERITY_RANK, triage_event
+from app.agents.triage import SEVERITY_RANK, max_severity, triage_event
 from app.config import Settings
 from app.event_bus import EventBus
 from app.integrations.response_executor import ResponseExecutor
@@ -90,6 +90,7 @@ class SOCPipeline:
                 Alert.last_seen >= cutoff,
             )
             .order_by(Alert.last_seen.desc())
+            .with_for_update()
         )
         old_severity = existing.severity if existing else "low"
         event_count = (existing.event_count + 1) if existing else 1
@@ -113,23 +114,39 @@ class SOCPipeline:
 
         if existing:
             alert = existing
+            stored_severity = alert.severity
+            effective_severity = max_severity(stored_severity, triage["severity"])
+            incoming_is_same_or_higher = (
+                SEVERITY_RANK[triage["severity"]]
+                >= SEVERITY_RANK.get(stored_severity, 1)
+            )
             alert.event_count = event_count
             alert.last_seen = now_iso
             alert.updated_at = now_iso
-            alert.severity = triage["severity"]
+            alert.severity = effective_severity
             alert.confidence = max(alert.confidence, triage["confidence"])
-            alert.title = triage["title"]
-            alert.description = triage["description"]
             alert.normalized_event = {
                 key: value for key, value in normalized.items() if key != "raw"
             }
             alert.raw_event = normalized["raw"]
-            alert.triage = triage
             alert.enrichment = enriched
             alert.ai_analysis = ai_analysis
-            alert.mitre = triage["mitre"]
-            alert.recommendations = triage["recommendations"]
             alert.asset = (enriched.get("asset") or {}).get("name")
+            if incoming_is_same_or_higher:
+                alert.title = triage["title"]
+                alert.description = triage["description"]
+                alert.triage = triage
+                alert.mitre = triage["mitre"]
+                alert.recommendations = triage["recommendations"]
+            else:
+                triage = alert.triage or {
+                    **triage,
+                    "severity": effective_severity,
+                    "title": alert.title,
+                    "description": alert.description,
+                    "mitre": alert.mitre,
+                    "recommendations": alert.recommendations,
+                }
         else:
             alert = Alert(
                 fingerprint=normalized["fingerprint"],
@@ -175,7 +192,7 @@ class SOCPipeline:
                 received_at=now_iso,
             )
         )
-        escalated = SEVERITY_RANK[triage["severity"]] > SEVERITY_RANK[old_severity]
+        escalated = SEVERITY_RANK[alert.severity] > SEVERITY_RANK[old_severity]
         incident = self._ensure_incident(db, alert, now_iso)
         await self._ensure_actions(db, alert, normalized, triage, enriched)
         db.add(
