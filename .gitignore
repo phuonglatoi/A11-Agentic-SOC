@@ -13,3 +13,4 @@ work/render*/
 data/*.db
 data/*.db-*
 *.log
+/benchmark_results.json

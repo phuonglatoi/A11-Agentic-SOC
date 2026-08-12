@@ -34,6 +34,9 @@ datasets as long as a label column is present.
 
 - `a11_seed_labeled_events.jsonl`: compact seed data used to build the bundled
   demo model. Each line is one labeled security event.
+- `a11_benchmark_labeled_events.jsonl`: held-out lab examples used only for
+  evaluation. These rows are intentionally separate from the seed training
+  rows so the reported score is not training accuracy.
 
 ## Train the bundled model
 
@@ -58,6 +61,26 @@ Then rebuild the API container:
 ```bash
 docker compose build api
 docker compose --profile automation up -d
+```
+
+## Run the reproducible benchmark
+
+```bash
+python3 scripts/benchmark_attack_classifier.py \
+  --input datasets/a11_benchmark_labeled_events.jsonl \
+  --model models/attack_classifier.json \
+  --output benchmark_results.json
+```
+
+The JSON result contains accuracy, macro precision/recall/F1, per-class
+metrics, a confusion matrix and each misclassified sample. For an external
+DataSense/CIC benchmark, provide a held-out CSV that was not used for training:
+
+```bash
+python3 scripts/benchmark_attack_classifier.py \
+  --csv /path/to/DataSense_test_only.csv \
+  --model models/attack_classifier.json \
+  --output benchmark_results.json
 ```
 
 The model is deliberately lightweight JSON so the Ubuntu lab can run offline
