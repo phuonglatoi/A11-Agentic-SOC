@@ -75,6 +75,9 @@ class EnrichmentAgent:
             "private": ip.is_private,
             "global": ip.is_global,
             "loopback": ip.is_loopback,
+            "link_local": ip.is_link_local,
             "multicast": ip.is_multicast,
             "reserved": ip.is_reserved,
+            "unspecified": ip.is_unspecified,
+            "broadcast": value == "255.255.255.255",
         }

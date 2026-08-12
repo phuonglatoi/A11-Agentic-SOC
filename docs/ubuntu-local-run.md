@@ -311,6 +311,20 @@ sudo python3 scripts/ship_apache_access.py \
   --api-key <strong-ingest-key>
 ```
 
+For normal operation, install it once as a hardened systemd service instead of
+keeping a terminal open:
+
+```bash
+sudo bash scripts/install_apache_shipper_service.sh
+sudo systemctl status a11-apache-shipper
+sudo journalctl -u a11-apache-shipper -f
+```
+
+The installer reads `SOC_API_KEY` from the local `.env`, stores it in a root-only
+environment file, starts after Apache/Docker/network readiness, follows log
+rotation, and retries delivery when A11 is temporarily unavailable. It never
+commits the secret to Git.
+
 From Kali:
 
 ```bash
@@ -377,6 +391,18 @@ filterlog records without a validated action are not promoted to HTTP flood by
 the ML agent. The dashboard shows `PASS/BLOCK` and `IN/OUT` beside the source,
 plus the normalized destination and mapped asset, so analysts can verify the
 decision without opening raw JSON first.
+
+VMware infrastructure addresses are also modeled explicitly:
+
+```text
+192.168.228.2   VMware NAT gateway
+192.168.228.254 VMware network/DHCP service
+0.0.0.0 -> 255.255.255.255 DHCP/bootstrap broadcast
+```
+
+These records remain available as LOW telemetry and are never presented as the
+attacker. The expected attack source for the documented lab is
+`kali-lab / 192.168.228.128`.
 
 Existing alerts retain their historical peak severity for audit integrity. To
 validate a rule update, generate a new event after the correlation window or

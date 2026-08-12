@@ -112,9 +112,32 @@ def triage_event(
         web_ports = {80, 443, 8000, 8080, 8443}
         lab_source = bool(enrichment.get("lab_source"))
         source_is_infrastructure = bool(enrichment.get("source_is_infrastructure"))
+        source_context = enrichment.get("source_ip") or {}
+        destination_context = enrichment.get("destination_ip") or {}
+        source_is_non_endpoint = bool(
+            source_context.get("unspecified")
+            or source_context.get("multicast")
+            or source_context.get("broadcast")
+        )
+        destination_is_non_endpoint = bool(
+            destination_context.get("unspecified")
+            or destination_context.get("multicast")
+            or destination_context.get("broadcast")
+        )
+        network_service_ports = {53, 67, 68, 123}
+        network_service_traffic = protocol == "udp" and bool(
+            {event.get("src_port"), dst_port} & network_service_ports
+        )
         valid_action = action in {"pass", "block", "reject"}
         inbound = direction in {"in", "inbound"}
-        firewall_ml_eligible = valid_action and inbound and not source_is_infrastructure
+        firewall_ml_eligible = bool(
+            valid_action
+            and inbound
+            and not source_is_infrastructure
+            and not source_is_non_endpoint
+            and not destination_is_non_endpoint
+            and not network_service_traffic
+        )
         if source_is_infrastructure:
             source_name = (
                 (enrichment.get("source_asset") or {}).get("name")
@@ -123,6 +146,16 @@ def triage_event(
             firewall_ml_suppression_reason = (
                 f"The source is the trusted infrastructure asset {source_name}; "
                 "network-attack ML escalation was suppressed."
+            )
+        elif source_is_non_endpoint or destination_is_non_endpoint:
+            firewall_ml_suppression_reason = (
+                "The firewall record is broadcast, multicast, or unspecified-address "
+                "service traffic; attack escalation was suppressed."
+            )
+        elif network_service_traffic:
+            firewall_ml_suppression_reason = (
+                "The firewall record matches DNS/DHCP/NTP infrastructure traffic; "
+                "attack escalation was suppressed."
             )
         elif not valid_action:
             firewall_ml_suppression_reason = (
@@ -252,6 +285,9 @@ def triage_event(
             action in {"block", "reject"}
             and event_count >= 8
             and not source_is_infrastructure
+            and not source_is_non_endpoint
+            and not destination_is_non_endpoint
+            and not network_service_traffic
         ):
             severity = "medium"
             confidence = min(0.88, 0.55 + event_count * 0.01)

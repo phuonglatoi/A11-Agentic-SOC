@@ -247,7 +247,8 @@ function overviewRow(alert) {
 function fullAlertRow(alert) {
   const direction = String(alert.normalized_event?.firewall_direction || "").toUpperCase();
   const action = String(alert.normalized_event?.firewall_action || "").toUpperCase();
-  const trafficContext = [action, direction].filter(Boolean).join(" · ") || alert.source;
+  const sourceAsset = alert.enrichment?.source_asset?.name || "unmapped source";
+  const trafficContext = [sourceAsset, action, direction].filter(Boolean).join(" · ");
   return `<tr data-id="${esc(alert.id)}">
     <td>${severityBadge(alert.severity)}</td>
     <td><span class="cell-title">${esc(alert.title)}</span><span class="cell-sub">${esc(alert.id)} · ${esc(alert.event_type)}</span></td>
@@ -287,7 +288,7 @@ function openAlert(id) {
     <div class="detail-grid">
       <div><span>Status</span><strong>${esc(alert.status)}</strong></div><div><span>Confidence</span><strong>${Math.round(alert.confidence * 100)}%</strong></div>
       <div><span>Events</span><strong>${alert.event_count}</strong></div><div><span>Last seen</span><strong>${formatTime(alert.last_seen)}</strong></div>
-      <div><span>Source IP</span><strong>${esc(alert.src_ip || "—")}</strong></div><div><span>Destination</span><strong>${esc(alert.dst_ip || "—")}</strong></div>
+      <div><span>Source IP / Asset</span><strong>${esc(alert.src_ip || "—")} · ${esc(alert.enrichment?.source_asset?.name || "unmapped")}</strong></div><div><span>Destination</span><strong>${esc(alert.dst_ip || "—")}</strong></div>
       <div><span>Asset</span><strong>${esc(alert.asset || "unmapped")}</strong></div><div><span>Engine</span><strong>${esc(alert.ai_analysis?.engine || "deterministic")}</strong></div>
       <div><span>Firewall action</span><strong>${esc(alert.normalized_event?.firewall_action || "—")}</strong></div><div><span>Traffic direction</span><strong>${esc(alert.normalized_event?.firewall_direction || "—")}</strong></div>
     </div>

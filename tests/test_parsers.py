@@ -196,3 +196,32 @@ def test_apache_high_volume_from_remote_source_is_high_http_flood():
     assert triage["severity"] == "high"
     assert "HTTP flood" in triage["title"]
     assert any(item["id"] == "T1499" for item in triage["mitre"])
+
+
+def test_dhcp_broadcast_is_not_promoted_to_network_scan():
+    event = normalize_event(
+        "<134>Jul 30 08:49:24 filterlog: "
+        "69,,,0,em1,match,block,in,4,0x0,,64,12345,0,DF,17,udp,328,"
+        "0.0.0.0,255.255.255.255,68,67,288",
+        source_hint="syslog",
+    )
+    event["ml_prediction"] = {
+        "enabled": True,
+        "status": "ok",
+        "attack_type": "network_scan",
+        "confidence": 0.92,
+        "severity": "high",
+    }
+
+    triage = triage_event(
+        event,
+        event_count=100,
+        enrichment={
+            "source_ip": {"unspecified": True},
+            "destination_ip": {"broadcast": True},
+        },
+    )
+
+    assert triage["severity"] == "low"
+    assert "network scan" not in triage["title"].lower()
+    assert any("broadcast" in reason for reason in triage["reasons"])

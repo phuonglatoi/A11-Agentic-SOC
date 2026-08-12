@@ -22,5 +22,13 @@
     "criticality": "low",
     "owner": "Lab",
     "zone": "WAN"
+  },
+  {
+    "name": "vmware-network-service",
+    "ips": ["192.168.228.2", "192.168.228.254"],
+    "type": "infrastructure",
+    "criticality": "low",
+    "owner": "VMware Workstation",
+    "zone": "VMnet8"
   }
 ]
