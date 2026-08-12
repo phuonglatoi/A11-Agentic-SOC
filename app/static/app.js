@@ -245,10 +245,14 @@ function overviewRow(alert) {
 }
 
 function fullAlertRow(alert) {
+  const direction = String(alert.normalized_event?.firewall_direction || "").toUpperCase();
+  const action = String(alert.normalized_event?.firewall_action || "").toUpperCase();
+  const trafficContext = [action, direction].filter(Boolean).join(" · ") || alert.source;
   return `<tr data-id="${esc(alert.id)}">
     <td>${severityBadge(alert.severity)}</td>
     <td><span class="cell-title">${esc(alert.title)}</span><span class="cell-sub">${esc(alert.id)} · ${esc(alert.event_type)}</span></td>
-    <td>${esc(alert.src_ip || "—")}</td><td>${esc(alert.asset || alert.dst_ip || "—")}</td>
+    <td><span class="cell-title">${esc(alert.src_ip || "—")}</span><span class="cell-sub">${esc(trafficContext)}</span></td>
+    <td><span class="cell-title">${esc(alert.dst_ip || "—")}${alert.dst_port ? `:${esc(alert.dst_port)}` : ""}</span><span class="cell-sub">→ ${esc(alert.asset || "unmapped")}</span></td>
     <td>${Math.round(alert.confidence * 100)}%</td><td><span class="status-chip">${esc(alert.status)}</span></td><td>${ago(alert.last_seen)}</td>
   </tr>`;
 }
@@ -285,6 +289,7 @@ function openAlert(id) {
       <div><span>Events</span><strong>${alert.event_count}</strong></div><div><span>Last seen</span><strong>${formatTime(alert.last_seen)}</strong></div>
       <div><span>Source IP</span><strong>${esc(alert.src_ip || "—")}</strong></div><div><span>Destination</span><strong>${esc(alert.dst_ip || "—")}</strong></div>
       <div><span>Asset</span><strong>${esc(alert.asset || "unmapped")}</strong></div><div><span>Engine</span><strong>${esc(alert.ai_analysis?.engine || "deterministic")}</strong></div>
+      <div><span>Firewall action</span><strong>${esc(alert.normalized_event?.firewall_action || "—")}</strong></div><div><span>Traffic direction</span><strong>${esc(alert.normalized_event?.firewall_direction || "—")}</strong></div>
     </div>
     <div class="detail-section"><h3>Assessment</h3><p>${esc(alert.description)}</p><ul>${reasons}</ul></div>
     ${mlSection}

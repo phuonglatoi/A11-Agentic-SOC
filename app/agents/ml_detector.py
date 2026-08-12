@@ -40,12 +40,16 @@ def event_to_text(event: dict[str, Any], event_count: int = 1) -> str:
     event_type = str(event.get("event_type") or "")
     dst_port = event.get("dst_port")
     protocol = str(event.get("protocol") or "").lower()
+    action = str(event.get("firewall_action") or "").lower()
+    direction = str(event.get("firewall_direction") or "").lower()
     web_ports = {80, 443, 8000, 8080, 8443}
     if (
         event_type.startswith("opnsense.firewall_")
         and event_count >= 50
         and protocol == "tcp"
         and dst_port in web_ports
+        and action in {"pass", "block", "reject"}
+        and direction in {"in", "inbound"}
     ):
         parts.extend(
             [

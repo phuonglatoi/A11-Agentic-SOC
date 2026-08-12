@@ -7,6 +7,14 @@ from typing import Any
 
 
 class EnrichmentAgent:
+    INFRASTRUCTURE_TYPES = {
+        "firewall",
+        "gateway",
+        "infrastructure",
+        "soc",
+        "soc-server",
+    }
+
     def __init__(self, data_dir: Path):
         self.assets = self._load(data_dir / "assets.json")
         self.iocs = self._load(data_dir / "iocs.json")
@@ -30,16 +38,25 @@ class EnrichmentAgent:
             for value in (src_ip, dst_ip)
             if value in self.iocs_by_value
         ]
-        asset = self.assets_by_ip.get(dst_ip) or self.assets_by_ip.get(
+        source_asset = self.assets_by_ip.get(src_ip)
+        destination_asset = self.assets_by_ip.get(dst_ip) or self.assets_by_ip.get(
             event.get("host")
         )
         return {
             "source_ip": self._ip_context(src_ip),
             "destination_ip": self._ip_context(dst_ip),
-            "asset": asset,
+            # ``asset`` remains the destination asset for API/UI compatibility.
+            "asset": destination_asset,
+            "source_asset": source_asset,
+            "destination_asset": destination_asset,
+            "source_is_infrastructure": bool(
+                source_asset
+                and str(source_asset.get("type") or "").lower()
+                in self.INFRASTRUCTURE_TYPES
+            ),
             "ioc_matches": matches,
             "lab_source": bool(
-                src_ip and self.assets_by_ip.get(src_ip, {}).get("type") == "security-test"
+                source_asset and source_asset.get("type") == "security-test"
             ),
         }
 

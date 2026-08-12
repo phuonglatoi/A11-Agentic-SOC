@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.agents.ml_detector import MLDetectionAgent
+from app.agents.ml_detector import MLDetectionAgent, event_to_text
 from app.agents.triage import triage_event
 from app.parsers import normalize_event
 
@@ -66,3 +66,16 @@ def test_high_confidence_opnsense_network_scan_ml_escalates_to_high():
 
     assert triage["severity"] == "high"
     assert "network scan" in triage["title"].lower()
+
+
+def test_ml_feature_builder_does_not_inject_flood_tokens_for_outbound_traffic():
+    event = normalize_event(
+        "<134>Jul 30 08:49:24 filterlog: "
+        "69,,,0,em1,match,pass,out,4,0x0,,64,12345,0,DF,6,tcp,60,"
+        "192.168.1.10,192.168.1.1,52411,80,0,S,1234567890,,64240,,mss",
+        source_hint="syslog",
+    )
+
+    text = event_to_text(event, event_count=150).lower()
+
+    assert "goldeneye slowloris http flood" not in text

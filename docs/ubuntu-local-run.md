@@ -288,17 +288,25 @@ Use this checklist after Kali can ping the OPNsense WAN address, for example
 
 ### Apache access.log shipper for web attack evidence
 
-If the lab has a Web target at `192.168.1.100`, first create an OPNsense NAT
-rule:
+In the current one-server lab, Apache and A11 SOC share Ubuntu IP
+`192.168.1.10`. Create a source-restricted OPNsense NAT rule:
 
 ```text
-WAN address:80 -> 192.168.1.100:80
+Interface: WAN
+Protocol: TCP
+Source: 192.168.228.128/32 (Kali only)
+Destination: WAN address:80
+Redirect target: 192.168.1.10:80
+Filter rule association: Pass
+Log: enabled
 ```
 
-Then run the included access-log shipper on the Web target:
+Do not publish A11 `8000`, n8n `5678`, Mailpit `8025`, or PostgreSQL `5432`
+through this NAT rule. Then run the included access-log shipper on Ubuntu in a
+second terminal:
 
 ```bash
-python3 scripts/ship_apache_access.py \
+sudo python3 scripts/ship_apache_access.py \
   --soc-url http://192.168.1.10:8000 \
   --api-key <strong-ingest-key>
 ```
@@ -329,9 +337,9 @@ python3 goldeneye.py http://192.168.228.142 -s 100 -w 10
 ```
 
 The SOC detects the firewall side of this test from OPNsense `filterlog` syslog.
-When the same source creates at least 50 correlated TCP events against a web
-port (`80`, `443`, `8000`, `8080`, `8443`) inside the correlation window, the
-triage agent raises:
+The context gate requires a validated firewall action, inbound direction, a
+non-infrastructure source, TCP, a web-facing destination port, and at least 50
+correlated events inside the correlation window. It then raises:
 
 ```text
 Possible HTTP flood / DoS traffic
@@ -347,6 +355,33 @@ still requiring repeated firewall evidence rather than a single blocked packet.
 For the richest evidence, also ship Apache `access.log` as described above. The
 firewall log proves the network flood; the access log proves the HTTP path and
 user-agent such as `GoldenEye`, `sqlmap`, `dirb` or `nikto`.
+
+### Why normal OPNsense traffic has different source IPs
+
+OPNsense records both inbound and outbound traffic. A source IP shown in the
+Alert queue is the packet source after normalization, not automatically the
+attacker. The current detection policy therefore treats the fields together:
+
+```text
+firewall_action + firewall_direction + src_ip/source_asset
++ protocol + dst_port + correlated event count
+```
+
+- `192.168.228.128`, inbound on WAN: controlled Kali attack source.
+- `192.168.1.10`, outbound: Ubuntu service traffic, not an external attack.
+- `192.168.1.1` or `192.168.228.142`: OPNsense infrastructure addresses.
+- UDP/TCP PASS events below a detection threshold: retained as LOW telemetry.
+
+Outbound records, infrastructure-originated records, and malformed/generic
+filterlog records without a validated action are not promoted to HTTP flood by
+the ML agent. The dashboard shows `PASS/BLOCK` and `IN/OUT` beside the source,
+plus the normalized destination and mapped asset, so analysts can verify the
+decision without opening raw JSON first.
+
+Existing alerts retain their historical peak severity for audit integrity. To
+validate a rule update, generate a new event after the correlation window or
+mark the old alert `closed`/`false_positive`; do not judge the new policy from
+an alert that was already escalated by an older version.
 
 ## 8. Operational checks
 

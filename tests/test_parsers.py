@@ -98,3 +98,101 @@ def test_opnsense_lab_tcp_deny_escalates_quickly_for_demo():
 
     assert triage["severity"] == "high"
     assert "network scan" in triage["title"].lower() or "http flood" in triage["title"].lower()
+
+
+def test_opnsense_outbound_pass_is_not_http_flood():
+    event = normalize_event(
+        "<134>Jul 30 08:49:24 filterlog: "
+        "69,,,0,em1,match,pass,out,4,0x0,,64,12345,0,DF,6,tcp,60,"
+        "192.168.1.10,192.168.1.1,52411,80,0,S,1234567890,,64240,,mss",
+        source_hint="syslog",
+    )
+    event["ml_prediction"] = {
+        "enabled": True,
+        "status": "ok",
+        "attack_type": "http_flood_dos",
+        "confidence": 0.91,
+        "severity": "high",
+        "mitre": [{"id": "T1498", "name": "Network Denial of Service"}],
+    }
+
+    triage = triage_event(
+        event,
+        event_count=150,
+        enrichment={"source_is_infrastructure": False},
+    )
+
+    assert triage["severity"] == "low"
+    assert "HTTP flood" not in triage["title"]
+    assert any("suppressed" in reason for reason in triage["reasons"])
+
+
+def test_opnsense_infrastructure_source_is_not_promoted_by_ml():
+    event = normalize_event(
+        "<134>Jul 30 08:49:24 filterlog: "
+        "69,,,0,em1,match,pass,in,4,0x0,,64,12345,0,DF,6,tcp,60,"
+        "192.168.228.142,192.168.1.10,52411,80,0,S,1234567890,,64240,,mss",
+        source_hint="syslog",
+    )
+    event["ml_prediction"] = {
+        "enabled": True,
+        "status": "ok",
+        "attack_type": "http_flood_dos",
+        "confidence": 0.91,
+        "severity": "high",
+    }
+
+    triage = triage_event(
+        event,
+        event_count=150,
+        enrichment={
+            "source_is_infrastructure": True,
+            "source_asset": {"name": "opnsense-gateway", "type": "firewall"},
+        },
+    )
+
+    assert triage["severity"] == "low"
+    assert any("opnsense-gateway" in reason for reason in triage["reasons"])
+
+
+def test_opnsense_generic_record_without_action_is_not_escalated():
+    event = {
+        "event_type": "opnsense.firewall_event",
+        "title": "OPNsense firewall observed TCP traffic",
+        "protocol": "TCP",
+        "dst_port": 80,
+        "firewall_action": None,
+        "firewall_direction": "in",
+        "src_ip": "192.168.228.128",
+        "dst_ip": "192.168.228.142",
+        "ml_prediction": {
+            "enabled": True,
+            "status": "ok",
+            "attack_type": "http_flood_dos",
+            "confidence": 0.9,
+            "severity": "high",
+        },
+    }
+
+    triage = triage_event(event, event_count=100)
+
+    assert triage["severity"] == "low"
+    assert any("no validated" in reason for reason in triage["reasons"])
+
+
+def test_apache_high_volume_from_remote_source_is_high_http_flood():
+    event = normalize_event(
+        '192.168.228.128 - - [28/Jul/2026:15:31:11 +0000] '
+        '"GET / HTTP/1.1" 200 512 "-" "GoldenEye"',
+        source_hint="apache",
+    )
+
+    triage = triage_event(
+        event,
+        event_count=120,
+        enrichment={"source_ip": {"loopback": False}},
+    )
+
+    assert triage["severity"] == "high"
+    assert "HTTP flood" in triage["title"]
+    assert any(item["id"] == "T1499" for item in triage["mitre"])

@@ -42,6 +42,8 @@ def triage_event(
     title_override: str | None = None
     description_override: str | None = None
     ml_prediction = event.get("ml_prediction") or {}
+    firewall_ml_eligible = True
+    firewall_ml_suppression_reason: str | None = None
 
     if event_type.startswith("suricata."):
         sensor_severity = event.get("sensor_severity")
@@ -75,11 +77,32 @@ def triage_event(
         if event_count >= 5:
             mitre.append({"id": "T1595.002", "name": "Vulnerability Scanning"})
     elif event_type == "web.access":
-        severity = "medium" if event_count >= 100 else "low"
-        confidence = 0.45 if event_count < 100 else 0.7
-        if event_count >= 100:
+        source_context = enrichment.get("source_ip") or {}
+        source_is_local = bool(
+            source_context.get("loopback") or enrichment.get("source_is_infrastructure")
+        )
+        severity = "high" if event_count >= 100 and not source_is_local else "low"
+        confidence = (
+            0.45
+            if severity == "low"
+            else min(0.94, 0.72 + event_count * 0.001)
+        )
+        if severity == "high":
+            title_override = "Possible HTTP flood / DoS traffic"
             reasons.append("A high request volume was correlated in a short window.")
-            mitre.append({"id": "T1498", "name": "Network Denial of Service"})
+            _append_mitre(
+                mitre,
+                [
+                    {"id": "T1498", "name": "Network Denial of Service"},
+                    {"id": "T1499", "name": "Endpoint Denial of Service"},
+                ],
+            )
+            recommendations.extend(
+                [
+                    "Compare the request burst with Apache access and error logs.",
+                    "Check web-service latency, worker saturation and interface throughput.",
+                ]
+            )
 
     elif event_type.startswith("opnsense.firewall_"):
         action = str(event.get("firewall_action") or "").lower()
@@ -88,6 +111,29 @@ def triage_event(
         dst_port = event.get("dst_port")
         web_ports = {80, 443, 8000, 8080, 8443}
         lab_source = bool(enrichment.get("lab_source"))
+        source_is_infrastructure = bool(enrichment.get("source_is_infrastructure"))
+        valid_action = action in {"pass", "block", "reject"}
+        inbound = direction in {"in", "inbound"}
+        firewall_ml_eligible = valid_action and inbound and not source_is_infrastructure
+        if source_is_infrastructure:
+            source_name = (
+                (enrichment.get("source_asset") or {}).get("name")
+                or "infrastructure"
+            )
+            firewall_ml_suppression_reason = (
+                f"The source is the trusted infrastructure asset {source_name}; "
+                "network-attack ML escalation was suppressed."
+            )
+        elif not valid_action:
+            firewall_ml_suppression_reason = (
+                "The firewall record has no validated PASS/BLOCK/REJECT action; "
+                "network-attack ML escalation was suppressed."
+            )
+        elif not inbound:
+            firewall_ml_suppression_reason = (
+                "The firewall record is not inbound traffic; network-attack ML "
+                "escalation was suppressed."
+            )
         ml_attack_type = str(ml_prediction.get("attack_type") or "")
         ml_confidence = float(ml_prediction.get("confidence") or 0.0)
         ml_high_confidence_network_attack = (
@@ -97,7 +143,12 @@ def triage_event(
             and ml_confidence >= 0.70
         )
 
-        if event_count >= 50 and protocol == "tcp" and dst_port in web_ports:
+        if (
+            firewall_ml_eligible
+            and event_count >= 50
+            and protocol == "tcp"
+            and dst_port in web_ports
+        ):
             severity = "high"
             confidence = min(0.96, 0.74 + event_count * 0.002)
             title_override = "Possible HTTP flood / DoS traffic"
@@ -133,7 +184,8 @@ def triage_event(
                 ]
             )
         elif (
-            action in {"block", "reject"}
+            firewall_ml_eligible
+            and action in {"block", "reject"}
             and protocol == "tcp"
             and (
                 event_count >= 20
@@ -196,7 +248,11 @@ def triage_event(
                     "If unauthorized, block or rate-limit the source after analyst approval.",
                 ]
             )
-        elif action in {"block", "reject"} and event_count >= 8:
+        elif (
+            action in {"block", "reject"}
+            and event_count >= 8
+            and not source_is_infrastructure
+        ):
             severity = "medium"
             confidence = min(0.88, 0.55 + event_count * 0.01)
             title_override = "Repeated firewall deny events"
@@ -241,7 +297,17 @@ def triage_event(
         attack_type = str(ml_prediction.get("attack_type") or "")
         ml_confidence = float(ml_prediction.get("confidence") or 0.0)
         ml_severity = str(ml_prediction.get("severity") or "low")
-        if attack_type and attack_type != "benign" and ml_confidence >= 0.65:
+        firewall_network_prediction = (
+            event_type.startswith("opnsense.firewall_")
+            and attack_type in {"network_scan", "http_flood_dos"}
+        )
+        if firewall_network_prediction and not firewall_ml_eligible:
+            if firewall_ml_suppression_reason:
+                reasons.append(firewall_ml_suppression_reason)
+            recommendations.append(
+                "Treat this record as infrastructure telemetry unless corroborated by an inbound sensor or application log."
+            )
+        elif attack_type and attack_type != "benign" and ml_confidence >= 0.65:
             if (
                 event_type.startswith("opnsense.firewall_")
                 and attack_type in {"network_scan", "http_flood_dos"}
