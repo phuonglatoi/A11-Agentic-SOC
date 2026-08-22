@@ -188,3 +188,41 @@ def test_existing_high_alert_is_not_downgraded_by_later_lower_signal(tmp_path: P
         assert alerts[0]["severity"] == "high"
         assert alerts[0]["title"] == "Probable network scan / reconnaissance"
         assert alerts[0]["event_count"] == 2
+
+
+def test_benign_web_request_is_stored_without_incident_or_response(tmp_path: Path):
+    settings = Settings(
+        database_url=f"sqlite:///{tmp_path / 'soc-benign-test.db'}",
+        api_key=INGEST,
+        admin_token=ADMIN,
+        syslog_enabled=False,
+        data_dir=Path("data"),
+        knowledge_dir=Path("knowledge"),
+        response_mode="dry_run",
+    )
+    marker = "a11-benign-unit-test"
+    raw_event = (
+        "192.168.228.128 - - [23/Aug/2026:10:00:00 +0000] "
+        f'"GET /?a11_marker={marker} HTTP/1.1" 200 1024 "-" '
+        f'"Mozilla/5.0 A11-BENIGN/{marker}"'
+    )
+
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/v1/ingest",
+            headers={"X-API-Key": INGEST},
+            json={"source": "apache", "event": raw_event},
+        )
+
+        assert response.status_code == 200
+        alert_id = response.json()["results"][0]["alert_id"]
+        alert = client.get(
+            f"/api/v1/alerts/{alert_id}", headers=_headers()
+        ).json()
+        incidents = client.get("/api/v1/incidents", headers=_headers()).json()
+        actions = client.get("/api/v1/actions", headers=_headers()).json()
+
+        assert marker in str(alert["raw_event"])
+        assert alert["severity"] in {"low", "medium"}
+        assert not [item for item in incidents if item["alert_id"] == alert_id]
+        assert not [item for item in actions if item["alert_id"] == alert_id]
