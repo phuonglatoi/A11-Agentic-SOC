@@ -9,6 +9,8 @@ const state = {
   stats: {},
   runtime: {},
   stream: null,
+  streamRetryTimer: null,
+  streamReconnectAttempts: 0,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -86,6 +88,8 @@ function toast(message, type = "") {
 function lockConsole(message = "") {
   if (state.stream) state.stream.close();
   state.stream = null;
+  if (state.streamRetryTimer) clearTimeout(state.streamRetryTimer);
+  state.streamRetryTimer = null;
   state.token = "";
   localStorage.removeItem("a11_soc_admin_token");
   $("#authError").textContent = message;
@@ -137,25 +141,35 @@ async function refreshAll(silent = false) {
 }
 
 async function connectStream() {
+  if (!state.token) return;
+  if (state.streamRetryTimer) clearTimeout(state.streamRetryTimer);
+  state.streamRetryTimer = null;
   if (state.stream) state.stream.close();
+  state.stream = null;
   let streamTicket;
   try {
     streamTicket = await api("/api/v1/stream-ticket", { method: "POST" });
   } catch (error) {
-    toast("Could not authorize the live stream", "error");
+    scheduleStreamReconnect();
     return;
   }
   const url = `/api/v1/stream?ticket=${encodeURIComponent(streamTicket.ticket)}`;
-  state.stream = new EventSource(url);
-  state.stream.onopen = () => {
+  const source = new EventSource(url);
+  state.stream = source;
+  source.onopen = () => {
+    state.streamReconnectAttempts = 0;
     $("#streamPulse").className = "pulse online";
     $("#streamLabel").textContent = "Live stream";
   };
-  state.stream.onerror = () => {
+  source.onerror = () => {
+    if (state.stream !== source) return;
+    source.close();
+    state.stream = null;
     $("#streamPulse").className = "pulse offline";
     $("#streamLabel").textContent = "Reconnecting";
+    scheduleStreamReconnect();
   };
-  state.stream.onmessage = async (message) => {
+  source.onmessage = async (message) => {
     let event;
     try {
       event = JSON.parse(message.data);
@@ -175,6 +189,18 @@ async function connectStream() {
     }
     await refreshAll(true);
   };
+}
+
+function scheduleStreamReconnect() {
+  if (!state.token || state.streamRetryTimer) return;
+  $("#streamPulse").className = "pulse offline";
+  $("#streamLabel").textContent = "Reconnecting";
+  const delay = Math.min(1000 * (2 ** state.streamReconnectAttempts), 30000);
+  state.streamReconnectAttempts = Math.min(state.streamReconnectAttempts + 1, 5);
+  state.streamRetryTimer = setTimeout(() => {
+    state.streamRetryTimer = null;
+    connectStream();
+  }, delay);
 }
 
 function render() {

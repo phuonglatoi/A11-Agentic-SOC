@@ -244,3 +244,25 @@ def test_benign_web_request_is_stored_without_incident_or_response(tmp_path: Pat
         assert alert["severity"] in {"low", "medium"}
         assert not [item for item in incidents if item["alert_id"] == alert_id]
         assert not [item for item in actions if item["alert_id"] == alert_id]
+
+
+def test_stream_ticket_is_issued_only_to_authenticated_dashboard(tmp_path: Path):
+    settings = Settings(
+        database_url=f"sqlite:///{tmp_path / 'soc-stream-test.db'}",
+        api_key=INGEST,
+        admin_token=ADMIN,
+        syslog_enabled=False,
+        data_dir=Path("data"),
+        knowledge_dir=Path("knowledge"),
+        response_mode="dry_run",
+    )
+
+    with TestClient(create_app(settings)) as client:
+        unauthorized = client.post("/api/v1/stream-ticket")
+        assert unauthorized.status_code == 401
+
+        response = client.post("/api/v1/stream-ticket", headers=_headers())
+        assert response.status_code == 200
+        ticket = response.json()["ticket"]
+        assert ticket
+        assert ticket in client.app.state.stream_tickets
