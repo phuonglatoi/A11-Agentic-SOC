@@ -7,7 +7,8 @@ the repository from GitHub.
 
 ```bash
 sudo apt update
-sudo apt install -y git curl ca-certificates
+sudo apt install -y git git-lfs curl ca-certificates
+git lfs install
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker "$USER"
 newgrp docker
@@ -17,8 +18,9 @@ docker compose version
 ## 2. Clone and configure
 
 ```bash
-git clone <your-github-repo-url> A11-Agentic-SOC
+git clone https://github.com/phuonglatoi/A11-Agentic-SOC.git A11-Agentic-SOC
 cd A11-Agentic-SOC
+git lfs pull
 cp .env.example .env
 ```
 
@@ -168,18 +170,18 @@ python3 scripts/train_attack_classifier.py \
   --output models/attack_classifier.json
 ```
 
-Train with the local Windows-host dataset directory (run this on Windows), or
-mount that directory into Ubuntu and substitute the Linux mount path. The CSV
-reader streams rows and keeps a bounded reservoir (250 rows per class per CSV
-in this example). Use matching deterministic row split settings for train and
+The seven CICIDS2017 CSV files are included in `datasets/cicids2017/` using Git
+LFS. After `git lfs pull`, train against the bundled directory. The CSV reader
+streams rows and keeps a bounded reservoir (250 rows per class per CSV in this
+example). Use matching deterministic row split settings for train and
 benchmark; identical raw rows are assigned to the same split:
 
-```powershell
-python scripts/train_attack_classifier.py `
-  --input datasets/a11_seed_labeled_events.jsonl `
-  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
-  --sample-per-class 250 `
-  --split train --holdout-percent 20 `
+```bash
+python3 scripts/train_attack_classifier.py \
+  --input datasets/a11_seed_labeled_events.jsonl \
+  --csv-dir datasets/cicids2017 \
+  --sample-per-class 250 \
+  --split train --holdout-percent 20 \
   --output models/attack_classifier.json
 ```
 
@@ -187,21 +189,21 @@ The benchmark takes a bounded stratified sample without replacement. Review
 macro metrics and per-class support; this sample is for lab comparison and is
 not a production SLA.
 
-```powershell
-python scripts/benchmark_attack_classifier.py `
-  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
-  --split test --holdout-percent 20 `
-  --max-per-class 250 --sample-size 1000 `
+```bash
+python3 scripts/benchmark_attack_classifier.py \
+  --csv-dir datasets/cicids2017 \
+  --split test --holdout-percent 20 \
+  --max-per-class 250 --sample-size 1000 \
   --output work/cicids2017_holdout.json
 ```
 
 The replay adapter strips the target label before ingestion. To send a small
 DoS-labeled sample into the local lab collector, set `SOC_API_KEY` and run:
 
-```powershell
-$env:SOC_API_KEY = "<your-ingest-key>"
-python scripts/replay_cicids_flows.py `
-  "C:\Users\Admin\Documents\MachineLearningCVE\Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv" `
+```bash
+export SOC_API_KEY="<your-ingest-key>"
+python3 scripts/replay_cicids_flows.py \
+  datasets/cicids2017/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv \
   --label http_flood_dos --rows 120 --interval-ms 100
 ```
 

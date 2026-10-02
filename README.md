@@ -3,8 +3,8 @@
 ## Dataset + ML Detection Agent
 
 The project includes a local **ML Detection Agent** and an adapter for the
-CICIDS2017 CICFlowMeter CSV files in
-`C:\Users\Admin\Documents\MachineLearningCVE`. CICIDS2017 is an older,
+CICIDS2017 CICFlowMeter CSV files in `datasets/cicids2017/` (stored in Git LFS).
+CICIDS2017 is an older,
 public intrusion-detection benchmark, not a current-production traffic sample.
 Its flow features can support controlled lab experiments for benign traffic,
 port scans, DoS/DDoS, web attacks, brute force, Bot and Infiltration. The
@@ -41,14 +41,14 @@ python3 scripts/train_attack_classifier.py \
   --output models/attack_classifier.json
 ```
 
-Train on the local CICIDS2017 directory (PowerShell):
+Train on the bundled CICIDS2017 dataset (Linux/Ubuntu):
 
-```powershell
-python scripts/train_attack_classifier.py `
-  --input datasets/a11_seed_labeled_events.jsonl `
-  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
-  --sample-per-class 250 `
-  --split train --holdout-percent 20 `
+```bash
+python3 scripts/train_attack_classifier.py \
+  --input datasets/a11_seed_labeled_events.jsonl \
+  --csv-dir datasets/cicids2017 \
+  --sample-per-class 250 \
+  --split train --holdout-percent 20 \
   --output models/attack_classifier.json
 ```
 
@@ -60,19 +60,19 @@ reusing a row for both fitting and evaluation. The test command reports a
 stratified sample, so inspect macro metrics and per-class support as well as
 accuracy; these results are a lab benchmark, not a production SLA.
 
-```powershell
-python scripts/train_attack_classifier.py `
-  --input datasets/a11_seed_labeled_events.jsonl `
-  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
-  --sample-per-class 250 `
-  --split train --holdout-percent 20 `
+```bash
+python3 scripts/train_attack_classifier.py \
+  --input datasets/a11_seed_labeled_events.jsonl \
+  --csv-dir datasets/cicids2017 \
+  --sample-per-class 250 \
+  --split train --holdout-percent 20 \
   --output models/attack_classifier.json
 
-python scripts/benchmark_attack_classifier.py `
-  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
-  --split test --holdout-percent 20 `
-  --max-per-class 250 `
-  --sample-size 1000 `
+python3 scripts/benchmark_attack_classifier.py \
+  --csv-dir datasets/cicids2017 \
+  --split test --holdout-percent 20 \
+  --max-per-class 250 \
+  --sample-size 1000 \
   --output work/cicids2017_holdout.json
 ```
 
@@ -80,10 +80,10 @@ Replay a small labeled category into the local A11 API for end-to-end telemetry
 testing. The script uses the dataset label only to select rows; it removes the
 label before posting each event. Set the ingestion key in the environment:
 
-```powershell
-$env:SOC_API_KEY = "<your-ingest-key>"
-python scripts/replay_cicids_flows.py `
-  "C:\Users\Admin\Documents\MachineLearningCVE\Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv" `
+```bash
+export SOC_API_KEY="<your-ingest-key>"
+python3 scripts/replay_cicids_flows.py \
+  datasets/cicids2017/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv \
   --label http_flood_dos --rows 120 --interval-ms 100
 ```
 

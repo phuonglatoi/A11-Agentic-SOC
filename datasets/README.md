@@ -1,8 +1,33 @@
 # A11 SOC attack training datasets
 
-This directory keeps small, sanitized training data for the thesis lab. The
-full public benchmark datasets are intentionally not committed because they are
-large and should be downloaded from their official pages with proper citation.
+This directory contains the compact A11 seed/holdout data and the CICIDS2017
+MachineLearningCSV benchmark used by the flow-classification experiments. The
+seven original CICIDS2017 CSV files are stored with Git LFS under
+`datasets/cicids2017/`; install Git LFS before cloning/pulling this repository
+to retrieve the actual data instead of only the LFS pointer files.
+
+On Ubuntu:
+
+```bash
+sudo apt update && sudo apt install -y git-lfs
+git lfs install
+git clone https://github.com/phuonglatoi/A11-Agentic-SOC.git
+cd A11-Agentic-SOC
+git lfs pull
+```
+
+The dataset is redistributed under the terms described by the Canadian
+Institute for Cybersecurity. Retain the attribution below in any redistribution
+or publication using these files.
+
+Dataset citation: Iman Sharafaldin, Arash Habibi Lashkari, and Ali A. Ghorbani,
+“Toward Generating a New Intrusion Detection Dataset and Intrusion Traffic
+Characterization,” *4th International Conference on Information Systems
+Security and Privacy (ICISSP)*, 2018, pp. 108–116,
+https://doi.org/10.5220/0006639801080116.
+
+Official dataset page: https://www.unb.ca/cic/datasets/ids-2017.html
+Dataset terms/FAQ: https://www.unb.ca/cic/datasets/index.html
 
 ## Recommended latest public dataset for this project
 
@@ -37,6 +62,9 @@ datasets as long as a label column is present.
 - `a11_benchmark_labeled_events.jsonl`: held-out lab examples used only for
   evaluation. These rows are intentionally separate from the seed training
   rows so the reported score is not training accuracy.
+- `cicids2017/*.csv`: the seven labeled CICIDS2017 CICFlowMeter CSVs. The raw
+  files are stored in Git LFS; Git LFS must be installed on Ubuntu to download
+  them.
 
 ## Train the bundled model
 
