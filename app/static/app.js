@@ -235,10 +235,20 @@ function mitreText(alert) {
   return (alert.mitre || []).slice(0, 2).map((item) => `<span class="mitre-chip">${esc(item.id)}</span>`).join(" ") || "—";
 }
 
+function alertClassification(alert) {
+  const prediction = alert.triage?.ml_prediction || alert.normalized_event?.ml_prediction || {};
+  const attackType = alert.attack_type || prediction.attack_type;
+  if (attackType && attackType !== "unknown") {
+    return `<span class="classification-chip ml">ML · ${esc(attackType)}</span>`;
+  }
+  const eventType = alert.event_type || alert.normalized_event?.event_type || "unclassified";
+  return `<span class="classification-chip rule">Rule / event · ${esc(eventType)}</span>`;
+}
+
 function overviewRow(alert) {
   return `<tr data-id="${esc(alert.id)}">
     <td>${severityBadge(alert.severity)}</td>
-    <td><span class="cell-title">${esc(alert.title)}</span><span class="cell-sub">${esc(alert.source)} · ${esc(alert.id)}</span></td>
+    <td><span class="cell-title">${esc(alert.title)}</span><span class="cell-sub">${alertClassification(alert)} · ${esc(alert.id)}</span></td>
     <td><span class="cell-title">${esc(alert.src_ip || "unknown")}</span><span class="cell-sub">→ ${esc(alert.asset || alert.dst_ip || "unmapped")}</span></td>
     <td>${mitreText(alert)}</td><td>×${alert.event_count}</td><td>${ago(alert.last_seen)}</td>
   </tr>`;
@@ -251,7 +261,7 @@ function fullAlertRow(alert) {
   const trafficContext = [sourceAsset, action, direction].filter(Boolean).join(" · ");
   return `<tr data-id="${esc(alert.id)}">
     <td>${severityBadge(alert.severity)}</td>
-    <td><span class="cell-title">${esc(alert.title)}</span><span class="cell-sub">${esc(alert.id)} · ${esc(alert.event_type)}</span></td>
+    <td><span class="cell-title">${esc(alert.title)}</span><span class="cell-sub">${alertClassification(alert)}<br>${esc(alert.id)}</span></td>
     <td><span class="cell-title">${esc(alert.src_ip || "—")}</span><span class="cell-sub">${esc(trafficContext)}</span></td>
     <td><span class="cell-title">${esc(alert.dst_ip || "—")}${alert.dst_port ? `:${esc(alert.dst_port)}` : ""}</span><span class="cell-sub">→ ${esc(alert.asset || "unmapped")}</span></td>
     <td>${Math.round(alert.confidence * 100)}%</td><td><span class="status-chip">${esc(alert.status)}</span></td><td>${ago(alert.last_seen)}</td>
@@ -278,13 +288,17 @@ function openAlert(id) {
   const knowledge = (alert.triage?.knowledge || []).map((item) => `<li><b>${esc(item.name)}</b> · score ${esc(item.score)}<br>${esc(item.excerpt)}</li>`).join("");
   const ml = alert.triage?.ml_prediction || alert.normalized_event?.ml_prediction || {};
   const mlSection = ml.enabled ? `
-    <div class="detail-section"><h3>ML Detection Agent</h3>
-      <p><b>${esc(ml.attack_type || "unknown")}</b> · confidence ${Math.round((ml.confidence || 0) * 100)}% · model ${esc(ml.model_version || "unknown")}</p>
-      <pre class="evidence-box">${esc(JSON.stringify(ml.top_labels || [], null, 2))}</pre>
-    </div>
-  ` : "";
+    <details class="detail-section analysis-section" open>
+      <summary><span>ML model prediction</span><span class="summary-meta">${esc(ml.attack_type || "unknown")} · ${Math.round((ml.confidence || 0) * 100)}%</span></summary>
+      <div class="section-content"><p>This is a model prediction, not the alert severity or an automatic response decision.</p>
+        <div class="prediction-grid"><div><span>Predicted class</span><b>${esc(ml.attack_type || "unknown")}</b></div><div><span>Model confidence</span><b>${Math.round((ml.confidence || 0) * 100)}%</b></div><div><span>Model version</span><b>${esc(ml.model_version || "unknown")}</b></div></div>
+        <pre class="evidence-box">${esc(JSON.stringify(ml.top_labels || [], null, 2))}</pre>
+      </div>
+    </details>
+  ` : `<div class="detail-section"><h3>ML model prediction</h3><p>Không có dự đoán ML cho alert này. Phân loại đang hiển thị dựa trên loại sự kiện/rule.</p></div>`;
   $("#detailContent").innerHTML = `<div class="detail-body">
     <div class="detail-title-row"><p class="eyebrow">ALERT INVESTIGATION / ${esc(alert.id)}</p><h2>${esc(alert.title)}</h2>${severityBadge(alert.severity)}</div>
+    <div class="classification-summary"><div><span>Attack classification</span>${alertClassification(alert)}</div><div><span>Alert confidence</span><strong>${Math.round(alert.confidence * 100)}%</strong><small>Điểm tin cậy của alert pipeline</small></div></div>
     <div class="detail-grid">
       <div><span>Status</span><strong>${esc(alert.status)}</strong></div><div><span>Confidence</span><strong>${Math.round(alert.confidence * 100)}%</strong></div>
       <div><span>Events</span><strong>${alert.event_count}</strong></div><div><span>Last seen</span><strong>${formatTime(alert.last_seen)}</strong></div>
@@ -292,12 +306,12 @@ function openAlert(id) {
       <div><span>Asset</span><strong>${esc(alert.asset || "unmapped")}</strong></div><div><span>Engine</span><strong>${esc(alert.ai_analysis?.engine || "deterministic")}</strong></div>
       <div><span>Firewall action</span><strong>${esc(alert.normalized_event?.firewall_action || "—")}</strong></div><div><span>Traffic direction</span><strong>${esc(alert.normalized_event?.firewall_direction || "—")}</strong></div>
     </div>
-    <div class="detail-section"><h3>Assessment</h3><p>${esc(alert.description)}</p><ul>${reasons}</ul></div>
+    <details class="detail-section analysis-section" open><summary><span>Assessment / nhận định</span><span class="summary-meta">${esc(alert.ai_analysis?.engine || "deterministic")}</span></summary><div class="section-content"><p>${esc(alert.description)}</p><ul>${reasons}</ul></div></details>
     ${mlSection}
-    <div class="detail-section"><h3>MITRE ATT&CK</h3><p>${(alert.mitre || []).map((item) => `${esc(item.id)} · ${esc(item.name)}`).join("<br>") || "Not mapped"}</p></div>
-    <div class="detail-section"><h3>Local knowledge retrieval</h3><ul>${knowledge || "<li>No matching playbook excerpt.</li>"}</ul></div>
-    <div class="detail-section"><h3>Recommendations</h3><ul>${recommendations}</ul></div>
-    <div class="detail-section"><h3>Latest normalized evidence</h3><pre class="evidence-box">${esc(JSON.stringify({ normalized: alert.normalized_event, raw: alert.raw_event, enrichment: alert.enrichment }, null, 2))}</pre></div>
+    <details class="detail-section analysis-section"><summary><span>MITRE ATT&CK mapping</span><span class="summary-meta">${(alert.mitre || []).length ? `${alert.mitre.length} technique(s)` : "Not mapped"}</span></summary><div class="section-content"><p>${(alert.mitre || []).map((item) => `${esc(item.id)} · ${esc(item.name)}`).join("<br>") || "Not mapped"}</p></div></details>
+    <details class="detail-section analysis-section"><summary><span>Playbook context / RAG</span><span class="summary-meta">${(alert.triage?.knowledge || []).length} match(es)</span></summary><div class="section-content"><ul>${knowledge || "<li>No matching playbook excerpt.</li>"}</ul></div></details>
+    <details class="detail-section analysis-section"><summary><span>Recommended next steps</span><span class="summary-meta">${(alert.recommendations || []).length} item(s)</span></summary><div class="section-content"><ul>${recommendations || "<li>No recommendation available.</li>"}</ul></div></details>
+    <details class="detail-section analysis-section"><summary><span>Evidence / raw and normalized event</span><span class="summary-meta">JSON</span></summary><div class="section-content"><pre class="evidence-box">${esc(JSON.stringify({ normalized: alert.normalized_event, raw: alert.raw_event, enrichment: alert.enrichment }, null, 2))}</pre></div></details>
   </div>`;
   $("#detailDialog").showModal();
 }
