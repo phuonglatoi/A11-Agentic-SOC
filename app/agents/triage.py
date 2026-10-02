@@ -391,7 +391,11 @@ def triage_event(
         severity = max_severity(severity, sensor_value)
         reasons.append("The upstream sensor supplied a severity value.")
 
-    if ml_prediction.get("enabled") and ml_prediction.get("status") == "ok":
+    if (
+        not str(event_type).startswith("generic.")
+        and ml_prediction.get("enabled")
+        and ml_prediction.get("status") == "ok"
+    ):
         attack_type = str(ml_prediction.get("attack_type") or "")
         ml_confidence = float(ml_prediction.get("confidence") or 0.0)
         firewall_network_prediction = (

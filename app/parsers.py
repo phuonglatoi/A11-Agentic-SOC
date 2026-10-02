@@ -22,6 +22,11 @@ SYSLOG_PREFIX_NO_HOST = re.compile(
     r"^(?:<(?P<priority>\d+)>)?(?P<timestamp>\w{3}\s+\d+\s+\d+:\d+:\d+)\s+"
     r"(?P<program>[\w./-]+)(?:\[\d+\])?:\s*(?P<message>.*)$"
 )
+SYSLOG_RFC5424_PREFIX = re.compile(
+    r"^<(?P<priority>\d+)>(?P<version>\d+)\s+(?P<timestamp>\S+)\s+"
+    r"(?P<host>\S+)\s+(?P<program>\S+)\s+(?P<procid>\S+)\s+"
+    r"(?P<msgid>\S+)\s+(?P<structured_data>-|\[.*?\])(?:\s+(?P<message>.*))?$"
+)
 SUSPICIOUS_PATH = re.compile(
     r"(?i)(?:\.\./|/\.env|/wp-admin|/phpmyadmin|/etc/passwd|union(?:\s+all)?\s+select|<script|cmd=|powershell)"
 )
@@ -85,6 +90,12 @@ def _parse_text(raw: str) -> dict[str, Any]:
         parsed["status"] = _as_int(parsed["status"])
         parsed["message"] = stripped
         parsed["_format"] = "apache"
+        return parsed
+
+    syslog = SYSLOG_RFC5424_PREFIX.match(stripped)
+    if syslog:
+        parsed = syslog.groupdict()
+        parsed["_format"] = "syslog"
         return parsed
 
     syslog = SYSLOG_PREFIX.match(stripped)
@@ -377,6 +388,7 @@ def normalize_event(
             "dst_port": _as_int(data.get("dst_port") or data.get("destination_port")),
             "username": data.get("username") or data.get("user"),
             "host": data.get("host") or metadata.get("host"),
+            "program": data.get("program"),
             "sensor_severity": data.get("severity"),
         }
 
@@ -392,12 +404,24 @@ def normalize_event(
 
 
 def fingerprint(event: dict[str, Any]) -> str:
+    signature = event.get("signature") or event.get("event_id")
+    if not signature and str(event.get("event_type") or "").startswith("generic."):
+        # Generic records have no network or detector identifiers. Include their
+        # emitter and message so unrelated syslog lines do not merge into one alert.
+        signature = "|".join(
+            str(value or "")
+            for value in (
+                event.get("program"),
+                event.get("title"),
+                event.get("message"),
+            )
+        )
     stable_parts = [
         str(event.get("source") or ""),
         str(event.get("event_type") or ""),
         str(event.get("src_ip") or ""),
         str(event.get("dst_ip") or ""),
         str(event.get("dst_port") or ""),
-        str(event.get("signature") or event.get("event_id") or ""),
+        str(signature or ""),
     ]
     return hashlib.sha256("|".join(stable_parts).encode("utf-8")).hexdigest()

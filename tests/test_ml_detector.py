@@ -82,3 +82,22 @@ def test_ml_feature_builder_does_not_inject_flood_tokens_for_outbound_traffic():
     text = event_to_text(event, event_count=150).lower()
 
     assert "goldeneye slowloris http flood" not in text
+
+
+def test_generic_logger_syslog_is_not_misclassified_as_sql_injection():
+    agent = MLDetectionAgent(Path("models/attack_classifier.json"))
+    event = normalize_event(
+        '<14>1 2026-10-02T14:49:23.480Z phuong-vm logger 1234 A11TEST - '
+        'A11-SYSLOG-TEST local collector check',
+        source_hint="syslog",
+    )
+
+    prediction = agent.detect(event)
+    event["ml_prediction"] = prediction
+    triage = triage_event(event)
+
+    assert prediction["status"] == "insufficient_event_semantics"
+    assert prediction["attack_type"] is None
+    assert triage["severity"] == "low"
+    assert triage["title"] == "Security event"
+    assert not any("ML Detection Agent predicted" in reason for reason in triage["reasons"])

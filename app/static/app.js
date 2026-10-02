@@ -330,10 +330,16 @@ function mitreText(alert) {
 function alertClassification(alert) {
   const prediction = alert.triage?.ml_prediction || alert.normalized_event?.ml_prediction || {};
   const attackType = alert.attack_type || prediction.attack_type;
-  if (attackType && attackType !== "unknown") {
+  const eventType = alert.event_type || alert.normalized_event?.event_type || "unclassified";
+  const confidence = Number(prediction.confidence || alert.ml_confidence || 0);
+  const isGeneric = eventType.startsWith("generic.");
+  if (!isGeneric && prediction.enabled && prediction.status === "ok" &&
+      confidence >= 0.65 && attackType && attackType !== "unknown" && attackType !== "benign") {
     return `<span class="classification-chip ml">ML · ${esc(attackType)}</span>`;
   }
-  const eventType = alert.event_type || alert.normalized_event?.event_type || "unclassified";
+  if (!isGeneric && attackType && attackType !== "unknown" && attackType !== "benign" && confidence > 0) {
+    return `<span class="classification-chip rule">ML candidate · ${esc(attackType)} · ${Math.round(confidence * 100)}%</span>`;
+  }
   return `<span class="classification-chip rule">Rule / event · ${esc(eventType)}</span>`;
 }
 

@@ -272,3 +272,28 @@ def test_ubuntu_sudo_auth_failure_is_low_until_repeated():
     assert event["username"] == "alice"
     assert triage_event(event, event_count=1)["severity"] == "low"
     assert triage_event(event, event_count=5)["severity"] == "medium"
+
+
+def test_rfc5424_generic_syslog_is_parsed_and_distinct_messages_do_not_share_fingerprint():
+    first = normalize_event(
+        '<14>1 2026-10-02T14:49:23.480Z phuong-vm logger 1234 A11TEST - '
+        'A11-SYSLOG-TEST local collector check',
+        source_hint="syslog",
+    )
+    repeated = normalize_event(
+        '<14>1 2026-10-02T14:50:23.480Z phuong-vm logger 1234 A11TEST - '
+        'A11-SYSLOG-TEST local collector check',
+        source_hint="syslog",
+    )
+    unrelated = normalize_event(
+        '<14>1 2026-10-02T14:50:23.480Z phuong-vm logger 1234 A11TEST - '
+        'unrelated service status check',
+        source_hint="syslog",
+    )
+
+    assert first["source"] == "syslog"
+    assert first["event_type"] == "generic.event"
+    assert first["program"] == "logger"
+    assert first["host"] == "phuong-vm"
+    assert first["fingerprint"] == repeated["fingerprint"]
+    assert first["fingerprint"] != unrelated["fingerprint"]

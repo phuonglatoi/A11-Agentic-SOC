@@ -116,6 +116,15 @@ class MLDetectionAgent:
         }
 
     def detect(self, event: dict[str, Any], event_count: int = 1) -> dict[str, Any]:
+        if str(event.get("event_type") or "").startswith("generic."):
+            return {
+                "enabled": False,
+                "status": "insufficient_event_semantics",
+                "attack_type": None,
+                "confidence": 0.0,
+                "top_labels": [],
+            }
+
         if not self.model:
             return {
                 "enabled": False,
