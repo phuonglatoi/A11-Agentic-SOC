@@ -25,6 +25,27 @@ SYSLOG_PREFIX_NO_HOST = re.compile(
 SUSPICIOUS_PATH = re.compile(
     r"(?i)(?:\.\./|/\.env|/wp-admin|/phpmyadmin|/etc/passwd|union(?:\s+all)?\s+select|<script|cmd=|powershell)"
 )
+SSH_FAILURE = re.compile(
+    r"Failed\s+(?:password|publickey|keyboard-interactive(?:/pam)?)\s+for\s+"
+    r"(?:(?:invalid user)\s+)?(?P<username>\S+)\s+from\s+"
+    r"(?P<src_ip>[0-9a-fA-F:.]+)(?:\s+port\s+(?P<src_port>\d+))?",
+    re.IGNORECASE,
+)
+SSH_SUCCESS = re.compile(
+    r"Accepted\s+\S+\s+for\s+(?P<username>\S+)\s+from\s+"
+    r"(?P<src_ip>[0-9a-fA-F:.]+)(?:\s+port\s+(?P<src_port>\d+))?",
+    re.IGNORECASE,
+)
+SSH_INVALID_USER = re.compile(
+    r"Invalid user\s+(?P<username>\S+)\s+from\s+(?P<src_ip>[0-9a-fA-F:.]+)"
+    r"(?:\s+port\s+(?P<src_port>\d+))?",
+    re.IGNORECASE,
+)
+SUDO_COMMAND = re.compile(
+    r"^(?P<username>[^\s:]+)\s*:\s+.*?\bUSER=(?P<target_user>[^;\s]+)"
+    r"\s*;\s+COMMAND=(?P<command>.*)$"
+)
+SUDO_FAILURE_USER = re.compile(r"\buser=(?P<username>[^\s;]+)")
 
 
 def _as_int(value: Any) -> int | None:
@@ -225,6 +246,74 @@ def _windows(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _ubuntu_syslog(data: dict[str, Any]) -> dict[str, Any]:
+    program = str(data.get("program") or "").lower()
+    message = str(data.get("message") or "")
+    common = {
+        "source": "ubuntu",
+        "timestamp": _timestamp(data.get("timestamp")),
+        "message": message,
+        "host": data.get("host"),
+        "program": program,
+    }
+
+    if program == "sshd":
+        match = SSH_FAILURE.search(message) or SSH_INVALID_USER.search(message)
+        if match:
+            return {
+                **common,
+                "event_type": "linux.ssh_auth_failure",
+                "title": "Ubuntu SSH authentication failure",
+                "username": match.group("username"),
+                "src_ip": match.group("src_ip"),
+                "src_port": _as_int(match.groupdict().get("src_port")),
+                "dst_port": 22,
+            }
+        match = SSH_SUCCESS.search(message)
+        if match:
+            return {
+                **common,
+                "event_type": "linux.ssh_auth_success",
+                "title": "Ubuntu SSH authentication success",
+                "username": match.group("username"),
+                "src_ip": match.group("src_ip"),
+                "src_port": _as_int(match.groupdict().get("src_port")),
+                "dst_port": 22,
+            }
+        return {
+            **common,
+            "event_type": "linux.sshd_event",
+            "title": "Ubuntu SSH service event",
+        }
+
+    if program == "sudo":
+        command_match = SUDO_COMMAND.search(message)
+        if command_match:
+            return {
+                **common,
+                "event_type": "linux.sudo_command",
+                "title": "Ubuntu sudo command executed",
+                "username": command_match.group("username"),
+                "target_user": command_match.group("target_user"),
+                "command": command_match.group("command"),
+            }
+        lower_message = message.lower()
+        if "authentication failure" in lower_message or "incorrect password" in lower_message:
+            user_match = SUDO_FAILURE_USER.search(message)
+            return {
+                **common,
+                "event_type": "linux.sudo_auth_failure",
+                "title": "Ubuntu sudo authentication failure",
+                "username": user_match.group("username") if user_match else None,
+            }
+
+    return {
+        **common,
+        "event_type": "linux.syslog_event",
+        "title": f"Ubuntu {program or 'system'} log event",
+    }
+
+
 def normalize_event(
     raw: dict[str, Any] | str,
     source_hint: str | None = None,
@@ -261,6 +350,11 @@ def normalize_event(
         data.get("event_type") or "suricata" in source_text or "eve" in source_text
     ):
         normalized = _suricata(data)
+    elif data.get("_format") == "syslog" and str(data.get("program", "")).lower() in {
+        "sshd",
+        "sudo",
+    }:
+        normalized = _ubuntu_syslog(data)
     elif data.get("_format") == "syslog" and data.get("program") == "filterlog":
         normalized = _opnsense_filterlog(data)
     elif any(word in source_text for word in ("apache", "access_combined", "httpd")):

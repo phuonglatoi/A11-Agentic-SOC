@@ -225,3 +225,50 @@ def test_dhcp_broadcast_is_not_promoted_to_network_scan():
     assert triage["severity"] == "low"
     assert "network scan" not in triage["title"].lower()
     assert any("broadcast" in reason for reason in triage["reasons"])
+
+
+def test_ubuntu_ssh_failures_are_normalized_and_detected():
+    event = normalize_event(
+        "<86>Oct  2 18:00:00 ubuntu sshd[4321]: Failed password for invalid user "
+        "demo from 198.51.100.42 port 42424 ssh2",
+        source_hint="syslog",
+    )
+
+    assert event["source"] == "ubuntu"
+    assert event["event_type"] == "linux.ssh_auth_failure"
+    assert event["src_ip"] == "198.51.100.42"
+    assert event["username"] == "demo"
+    assert event["dst_port"] == 22
+
+    triage = triage_event(event, event_count=3)
+    assert triage["severity"] == "medium"
+    assert any(item["id"] == "T1110.001" for item in triage["mitre"])
+
+
+def test_ubuntu_sudo_sensitive_command_is_flagged_conservatively():
+    event = normalize_event(
+        "<85>Oct  2 18:00:00 ubuntu sudo[4321]: "
+        "alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/sbin/useradd demo",
+        source_hint="syslog",
+    )
+
+    assert event["source"] == "ubuntu"
+    assert event["event_type"] == "linux.sudo_command"
+    assert event["username"] == "alice"
+    assert event["target_user"] == "root"
+    triage = triage_event(event)
+    assert triage["severity"] == "medium"
+    assert any(item["id"] == "T1548.003" for item in triage["mitre"])
+
+
+def test_ubuntu_sudo_auth_failure_is_low_until_repeated():
+    event = normalize_event(
+        "<85>Oct  2 18:00:00 ubuntu sudo[4321]: pam_unix(sudo:auth): "
+        "authentication failure; logname=alice ruser=alice user=alice",
+        source_hint="syslog",
+    )
+
+    assert event["event_type"] == "linux.sudo_auth_failure"
+    assert event["username"] == "alice"
+    assert triage_event(event, event_count=1)["severity"] == "low"
+    assert triage_event(event, event_count=5)["severity"] == "medium"

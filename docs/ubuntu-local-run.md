@@ -270,8 +270,35 @@ Use these local paths for the thesis lab:
 - Suricata EVE JSON: send events to `POST /services/collector/event` on TCP
   `8000`.
 - OPNsense/syslog: send remote syslog to Ubuntu UDP `5514`.
+- Ubuntu host authentication events (`sshd` and `sudo`): install the included
+  rsyslog forwarder; it forwards only `auth`/`authpriv` to the local collector.
 - Splunk: optional observation layer only. Do not make Splunk the primary log
   path for the local-first demo.
+
+Install and smoke-test Ubuntu host authentication collection on the SOC VM:
+
+```bash
+sudo apt update && sudo apt install -y rsyslog
+sudo bash scripts/install_ubuntu_syslog_forwarder.sh
+bash scripts/test_ubuntu_syslog.sh
+```
+
+The forwarder defaults to `127.0.0.1:5514`, so authentication logs stay on the
+Ubuntu SOC host until they enter the local collector. The smoke test emits at
+most five synthetic SSH failure messages, one per second, from a reserved
+documentation IP; it does not attempt real logins or generate a flood. Three
+matching failures should create a Medium alert named **Ubuntu SSH
+authentication failure**. The parser also recognizes successful SSH logins,
+sudo authentication failures and selected sensitive root commands. Ordinary
+Ubuntu system/journal messages outside `auth`/`authpriv` are not forwarded by
+this default config.
+
+The Docker services have memory/CPU ceilings and rotating local container logs
+to limit resource and disk growth during a lab run. Inspect operational
+container output with `docker compose logs`; the API container's own stdout is
+deliberately not sent back into its own syslog collector, which would create a
+feedback loop. Docker stdout is therefore bounded locally, not yet treated as
+SOC telemetry.
 
 ### Kali -> OPNsense -> A11 SOC restart checklist
 
@@ -404,8 +431,14 @@ Only run this against the lab WAN address, never against public systems. A safe
 starting point is a short run from Kali:
 
 ```bash
-python3 goldeneye.py http://192.168.228.142 -s 100 -w 10
+timeout -k 2s 10s python3 goldeneye.py http://192.168.228.142 -s 5 -w 1
 ```
+
+This is still a real load-generating tool: use only the isolated lab, watch
+`docker stats` and stop immediately if latency or memory use rises. Do not use
+the previous high settings such as hundreds of sockets/workers on a VM that is
+also hosting the SOC. For repeatable rule/parser validation without load, use
+`bash scripts/test_ubuntu_syslog.sh` instead.
 
 The SOC detects the firewall side of this test from OPNsense `filterlog` syslog.
 The context gate requires a validated firewall action, inbound direction, a
@@ -493,13 +526,22 @@ git pull
 docker compose --profile automation up -d --build
 ```
 
-For very small Ubuntu VMs, lower the ingest pressure or tune `.env`:
+For very small Ubuntu VMs, keep Ollama disabled, lower ingest pressure, and tune
+`.env`:
 
 ```env
 SYSLOG_QUEUE_MAXSIZE=1000
 SYSLOG_WORKER_COUNT=1
 WEBHOOK_TIMEOUT_SECONDS=5
 ```
+
+The queue is bounded and the API clamps worker settings to 1–4 workers and
+queue sizes to 100–10,000. When full, UDP syslog is dropped rather than allowed
+to consume unbounded memory; monitor `received`, `processed`, `dropped` and
+`queue_size` in `/health`. Ollama has a 3 GiB container cap by default so a
+large local model cannot take all host memory; a 7B model may not fit under that
+cap. Increase `mem_limit` only after confirming the VM has sufficient RAM and
+headroom for PostgreSQL, API, n8n and the OS.
 
 If the API is already stuck from a previous flood, restart only the API
 container:

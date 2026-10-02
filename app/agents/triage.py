@@ -8,6 +8,11 @@ SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 POWERSHELL_RISK = re.compile(
     r"(?i)(?:powershell|pwsh).*(?:-enc(?:odedcommand)?\b|frombase64string|downloadstring|invoke-expression|\biex\b)"
 )
+LINUX_PRIVILEGED_RISK = re.compile(
+    r"(?i)(?:/etc/(?:passwd|shadow|sudoers)|\b(?:useradd|usermod|userdel)\b|"
+    r"\b(?:iptables|nft|ufw)\b|\bsystemctl\s+(?:stop|disable)\b|"
+    r"\brm\s+-rf\b|\bchmod\s+[0-7]*[67]77\b|\bcurl\b.*\|\s*(?:bash|sh)\b)"
+)
 
 
 def max_severity(*values: str) -> str:
@@ -312,6 +317,50 @@ def triage_event(
             recommendations.append(
                 "Check whether the source is a known scanner or approved test host."
             )
+
+    elif event_type == "linux.ssh_auth_failure":
+        severity = "high" if event_count >= 8 else ("medium" if event_count >= 3 else "low")
+        confidence = min(0.95, 0.56 + event_count * 0.035)
+        reasons.append("Ubuntu sshd recorded a failed authentication attempt.")
+        if event_count >= 3:
+            mitre.append({"id": "T1110.001", "name": "Password Guessing"})
+        recommendations.extend(
+            [
+                "Check for a successful SSH login from the same source after the failures.",
+                "Verify the source is an authorized lab host before blocking it.",
+            ]
+        )
+    elif event_type == "linux.ssh_auth_success":
+        reasons.append("Ubuntu sshd recorded a successful authentication.")
+        recommendations.append(
+            "Confirm the account and source IP are expected for this Ubuntu host."
+        )
+    elif event_type == "linux.sudo_auth_failure":
+        severity = "high" if event_count >= 10 else ("medium" if event_count >= 5 else "low")
+        confidence = min(0.92, 0.55 + event_count * 0.03)
+        reasons.append("Ubuntu sudo recorded a failed privilege-authentication attempt.")
+        if event_count >= 5:
+            mitre.append({"id": "T1110", "name": "Brute Force"})
+        recommendations.append(
+            "Check the local account, terminal and surrounding authentication events."
+        )
+    elif event_type == "linux.sudo_command":
+        command = str(event.get("command") or "")
+        is_root_target = str(event.get("target_user") or "").lower() == "root"
+        if is_root_target and LINUX_PRIVILEGED_RISK.search(command):
+            severity = "medium"
+            confidence = 0.78
+            reasons.append(
+                "A privileged sudo command matched a sensitive system or security-control pattern."
+            )
+            mitre.append(
+                {"id": "T1548.003", "name": "Sudo and Sudo Caching"}
+            )
+            recommendations.append(
+                "Validate the user, command and change ticket; preserve the raw auth log."
+            )
+        else:
+            reasons.append("Ubuntu recorded a sudo command for audit review.")
 
     elif event_type == "windows.4625":
         severity = "high" if event_count >= 10 else ("medium" if event_count >= 3 else "low")

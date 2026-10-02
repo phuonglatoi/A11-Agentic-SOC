@@ -14,7 +14,12 @@ def _bool(name: str, default: bool) -> bool:
 
 def _int(name: str, default: int) -> int:
     value = os.getenv(name)
-    return int(value) if value else default
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
 
 
 @dataclass(slots=True)
@@ -42,8 +47,8 @@ class Settings:
     syslog_enabled: bool = True
     syslog_host: str = "0.0.0.0"
     syslog_port: int = 5514
-    syslog_queue_maxsize: int = 2000
-    syslog_worker_count: int = 2
+    syslog_queue_maxsize: int = 1000
+    syslog_worker_count: int = 1
     data_dir: Path = Path("data")
     knowledge_dir: Path = Path("knowledge")
     attack_model_path: Path = Path("models/attack_classifier.json")
@@ -87,11 +92,16 @@ class Settings:
             syslog_enabled=_bool("SYSLOG_ENABLED", defaults.syslog_enabled),
             syslog_host=os.getenv("SYSLOG_HOST", defaults.syslog_host),
             syslog_port=_int("SYSLOG_PORT", defaults.syslog_port),
-            syslog_queue_maxsize=_int(
-                "SYSLOG_QUEUE_MAXSIZE", defaults.syslog_queue_maxsize
+            syslog_queue_maxsize=min(
+                10000,
+                max(
+                    100,
+                    _int("SYSLOG_QUEUE_MAXSIZE", defaults.syslog_queue_maxsize),
+                ),
             ),
-            syslog_worker_count=max(
-                1, _int("SYSLOG_WORKER_COUNT", defaults.syslog_worker_count)
+            syslog_worker_count=min(
+                4,
+                max(1, _int("SYSLOG_WORKER_COUNT", defaults.syslog_worker_count)),
             ),
             data_dir=Path(os.getenv("DATA_DIR", str(defaults.data_dir))),
             knowledge_dir=Path(
