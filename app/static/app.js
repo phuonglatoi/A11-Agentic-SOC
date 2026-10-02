@@ -213,11 +213,95 @@ function render() {
   renderRuntime();
   renderStats();
   renderSources();
+  renderActivityCharts();
   renderAlerts();
   renderEvents();
   renderIncidents();
   renderActions();
   renderAudit();
+}
+
+function renderActivityCharts() {
+  const now = Date.now();
+  const windowMs = 24 * 60 * 60 * 1000;
+  const bucketMs = windowMs / 12;
+  const eventBuckets = Array(12).fill(0);
+  const alertBuckets = Array(12).fill(0);
+  let eventsInWindow = 0;
+
+  for (const event of state.events || []) {
+    const timestamp = new Date(event.received_at).getTime();
+    const age = now - timestamp;
+    if (!Number.isFinite(timestamp) || age < 0 || age >= windowMs) continue;
+    const index = 11 - Math.floor(age / bucketMs);
+    eventBuckets[index] += 1;
+    eventsInWindow += 1;
+  }
+  for (const alert of state.alerts || []) {
+    if (!["high", "critical"].includes(String(alert.severity || "").toLowerCase())) continue;
+    const timestamp = new Date(alert.last_seen).getTime();
+    const age = now - timestamp;
+    if (!Number.isFinite(timestamp) || age < 0 || age >= windowMs) continue;
+    alertBuckets[11 - Math.floor(age / bucketMs)] += 1;
+  }
+
+  const maxValue = Math.max(1, ...eventBuckets, ...alertBuckets);
+  const x = (index) => 48 + index * 47;
+  const y = (value) => 142 - (value / maxValue) * 112;
+  const makeLine = (values) => values.map((value, index) => `${index ? "L" : "M"}${x(index)},${y(value)}`).join(" ");
+  const eventLine = makeLine(eventBuckets);
+  const eventArea = `${eventLine} L${x(11)},148 L${x(0)},148 Z`;
+  const alertLine = makeLine(alertBuckets);
+  const tickValues = [0, Math.ceil(maxValue / 2), maxValue];
+  const ticks = tickValues.map((value) => {
+    const yy = y(value);
+    return `<line x1="44" y1="${yy}" x2="574" y2="${yy}" class="chart-gridline"/><text x="34" y="${yy + 4}" text-anchor="end" class="chart-tick">${value}</text>`;
+  }).join("");
+  const pointDots = eventBuckets.map((value, index) =>
+    `<circle cx="${x(index)}" cy="${y(value)}" r="3" class="event-point"><title>${value} events</title></circle>`
+  ).join("");
+  const timeLabels = [0, 2, 4, 6, 8, 10, 11].map((index) => {
+    const date = new Date(now - (11 - index) * bucketMs);
+    const label = date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    return `<text x="${x(index)}" y="169" text-anchor="middle" class="chart-tick">${label}</text>`;
+  }).join("");
+  const eventLabel = (count) => `${count.toLocaleString("vi-VN")} ${count === 1 ? "event" : "events"}`;
+  $("#activityTrendSummary").textContent = eventLabel(eventsInWindow);
+  $("#activityChart").innerHTML = `<svg viewBox="0 0 600 180" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="eventAreaFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#9675f5" stop-opacity=".34"/><stop offset="1" stop-color="#9675f5" stop-opacity="0"/></linearGradient></defs>
+    ${ticks}<path d="${eventArea}" class="event-area"/><path d="${eventLine}" class="event-line"/><path d="${alertLine}" class="alert-line"/>${pointDots}${timeLabels}
+  </svg>`;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today.getTime() - (6 - index) * 86400000);
+    return { date, label: date.toLocaleDateString("vi-VN", { weekday: "short" }), values: Array(12).fill(0) };
+  });
+  let eventsThisWeek = 0;
+  for (const event of state.events || []) {
+    const timestamp = new Date(event.received_at).getTime();
+    if (!Number.isFinite(timestamp)) continue;
+    const date = new Date(timestamp);
+    date.setHours(0, 0, 0, 0);
+    const daysAgo = Math.round((today.getTime() - date.getTime()) / 86400000);
+    if (daysAgo < 0 || daysAgo > 6) continue;
+    const dayIndex = 6 - daysAgo;
+    days[dayIndex].values[Math.min(11, Math.floor(new Date(timestamp).getHours() / 2))] += 1;
+    eventsThisWeek += 1;
+  }
+  const heatMax = Math.max(1, ...days.flatMap((day) => day.values));
+  const tones = ["#292832", "#40365e", "#5a4788", "#775bb4", "#9a79e6"];
+  const rows = days.map((day) => `<div class="heat-row"><span class="heat-day">${esc(day.label)}</span>${day.values.map((count, index) => {
+    const level = count ? Math.min(4, Math.max(1, Math.ceil((count / heatMax) * 4))) : 0;
+    const startHour = String(index * 2).padStart(2, "0");
+    return `<i class="heat-cell" style="--heat-color:${tones[level]}" title="${esc(day.label)} ${startHour}:00 · ${count} events"></i>`;
+  }).join("")}</div>`).join("");
+  const hours = Array.from({ length: 12 }, (_, index) => index * 2).map((hour) =>
+    `<span>${String(hour).padStart(2, "0")}</span>`
+  ).join("");
+  $("#heatmapSummary").textContent = eventLabel(eventsThisWeek);
+  $("#activityHeatmap").innerHTML = `<div class="heat-hour-labels"><span></span>${hours}</div>${rows}`;
 }
 
 function renderRuntime() {

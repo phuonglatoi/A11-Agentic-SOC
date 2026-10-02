@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A11 Agentic SOC - local-first security operations dashboard">
   <title>A11 // Agentic SOC</title>
-  <link rel="stylesheet" href="/styles.css">
+  <!-- Visual direction adapted from “SOC Dashboard (Cyber Security)” by Arun V S, CC BY 4.0: https://www.figma.com/community/file/1596233030947325421/soc-dashboard-cyber-security -->
+  <link rel="stylesheet" href="/styles.css?v=figma-soc-2">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -145,6 +146,25 @@
         </article>
       </div>
 
+      <div class="analytics-grid">
+        <article class="panel activity-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">TELEMETRY TREND</p><h2>Event activity · last 24 hours</h2></div>
+            <span class="source-summary-count" id="activityTrendSummary">0 events</span>
+          </div>
+          <div class="trend-legend"><span><i class="trend-key events"></i>All events</span><span><i class="trend-key alerts"></i>High / critical alerts</span></div>
+          <div id="activityChart" class="activity-chart" role="img" aria-label="Event activity chart for the last 24 hours"></div>
+        </article>
+        <article class="panel heatmap-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">WEEKLY ACTIVITY</p><h2>Event intensity · last 7 days</h2></div>
+            <span class="source-summary-count" id="heatmapSummary">0 events</span>
+          </div>
+          <div id="activityHeatmap" class="activity-heatmap" role="img" aria-label="Event activity by day and two-hour period"></div>
+          <div class="heatmap-scale"><span>Less</span><i></i><i></i><i></i><i></i><span>More</span></div>
+        </article>
+      </div>
+
       <article class="panel lab-flow">
         <div class="panel-head">
           <div>
@@ -248,7 +268,7 @@
         </article>
       </div>
 
-      <article class="panel">
+      <article class="panel" id="overviewLatestPanel">
         <div class="panel-head">
           <div><p class="eyebrow">REAL-TIME FEED</p><h2>Latest detections</h2></div>
           <button class="text-button" data-jump="alerts">Open full queue →</button>
@@ -378,6 +398,6 @@
     <span><b>Email evidence</b> Mailpit 8025</span>
     <span><b>Alert rule</b> HIGH/CRITICAL → n8n</span>
   </aside>
-  <script src="/app.js?v=3"></script>
+  <script src="/app.js?v=4"></script>
 </body>
 </html>
