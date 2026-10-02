@@ -11,6 +11,7 @@ const state = {
   stream: null,
   streamRetryTimer: null,
   streamReconnectAttempts: 0,
+  refreshInFlight: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -119,6 +120,8 @@ async function authenticate(token) {
 
 async function refreshAll(silent = false) {
   if (!state.token) return lockConsole();
+  if (state.refreshInFlight) return;
+  state.refreshInFlight = true;
   try {
     const source = $("#eventSourceFilter")?.value || "";
     const [alerts, events, sources, incidents, actions, audit, stats, runtime] = await Promise.all([
@@ -137,6 +140,8 @@ async function refreshAll(silent = false) {
   } catch (error) {
     render();
     if (error.message !== "Unauthorized") toast(error.message, "error");
+  } finally {
+    state.refreshInFlight = false;
   }
 }
 
@@ -556,7 +561,7 @@ function startDashboard() {
   setInterval(() => { $("#clock").textContent = new Date().toLocaleTimeString("vi-VN"); }, 1000);
   setInterval(() => {
     if (state.token && document.visibilityState === "visible") refreshAll(true);
-  }, 15000);
+  }, 5000);
   $("#clock").textContent = new Date().toLocaleTimeString("vi-VN");
   if (state.token) authenticate(state.token);
   else lockConsole("Nhập SOC_ADMIN_TOKEN để mở dashboard.");
