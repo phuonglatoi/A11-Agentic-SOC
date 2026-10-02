@@ -75,6 +75,24 @@ def test_end_to_end_ingest_incident_approval_and_audit(tmp_path: Path):
             f"/api/v1/alerts/{alert_id}/events", headers=_headers()
         ).json()
         assert len(events) == 2
+        recent_events = client.get("/api/v1/events", headers=_headers())
+        assert recent_events.status_code == 200
+        assert len(recent_events.json()) == 2
+        filtered_events = client.get(
+            "/api/v1/events?source=suricata", headers=_headers()
+        )
+        assert len(filtered_events.json()) == 2
+        sources = client.get("/api/v1/sources", headers=_headers()).json()
+        assert sources == [
+            {
+                "source": "suricata",
+                "events": 2,
+                "last_seen": recent_events.json()[0]["received_at"],
+            }
+        ]
+        assert client.get("/api/v1/stats", headers=_headers()).json()[
+            "security_events"
+        ] == 2
         incidents = client.get("/api/v1/incidents", headers=_headers()).json()
         assert len(incidents) == 1
 

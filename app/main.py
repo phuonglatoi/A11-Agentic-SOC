@@ -265,6 +265,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return db.scalars(query.order_by(Alert.last_seen.desc()).limit(limit)).all()
 
     @app.get(
+        "/api/v1/events",
+        response_model=list[SecurityEventOut],
+        dependencies=[Depends(require_admin)],
+    )
+    def list_events(
+        source: str | None = None,
+        limit: int = Query(default=200, ge=1, le=500),
+        db: Session = Depends(_db),
+    ):
+        query = select(SecurityEvent)
+        if source:
+            query = query.where(SecurityEvent.source == source)
+        return db.scalars(
+            query.order_by(SecurityEvent.received_at.desc()).limit(limit)
+        ).all()
+
+    @app.get("/api/v1/sources", dependencies=[Depends(require_admin)])
+    def source_stats(db: Session = Depends(_db)) -> list[dict[str, Any]]:
+        rows = db.execute(
+            select(
+                SecurityEvent.source,
+                func.count(SecurityEvent.id),
+                func.max(SecurityEvent.received_at),
+            ).group_by(SecurityEvent.source)
+        ).all()
+        return [
+            {"source": source, "events": count, "last_seen": last_seen}
+            for source, count, last_seen in rows
+        ]
+
+    @app.get(
         "/api/v1/alerts/{alert_id}",
         response_model=AlertOut,
         dependencies=[Depends(require_admin)],
@@ -486,11 +517,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         )
         total_events = db.scalar(select(func.sum(Alert.event_count))) or 0
+        stored_security_events = db.scalar(
+            select(func.count(SecurityEvent.id))
+        ) or 0
         return {
             "alerts_by_severity": dict(severity_rows),
             "open_incidents": open_incidents or 0,
             "pending_actions": pending_actions or 0,
             "correlated_events": total_events,
+            "security_events": stored_security_events,
         }
 
     @app.post("/api/v1/demo/generate", dependencies=[Depends(require_admin)])

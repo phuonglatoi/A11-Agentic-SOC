@@ -26,3 +26,5 @@ def test_syslog_datagrams_are_bounded_by_queue():
     assert stats["queue_size"] == 2
     assert stats["queue_maxsize"] == 2
     assert stats["dropped"] == 1
+    assert stats["failed"] == 0
+    assert stats["last_received_at"]

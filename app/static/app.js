@@ -1,6 +1,8 @@
 const state = {
   token: localStorage.getItem("a11_soc_admin_token") || "",
   alerts: [],
+  events: [],
+  sources: [],
   incidents: [],
   actions: [],
   audit: [],
@@ -114,15 +116,18 @@ async function authenticate(token) {
 async function refreshAll(silent = false) {
   if (!state.token) return lockConsole();
   try {
-    const [alerts, incidents, actions, audit, stats, runtime] = await Promise.all([
+    const source = $("#eventSourceFilter")?.value || "";
+    const [alerts, events, sources, incidents, actions, audit, stats, runtime] = await Promise.all([
       api("/api/v1/alerts?limit=200"),
+      api(`/api/v1/events?limit=200${source ? `&source=${encodeURIComponent(source)}` : ""}`),
+      api("/api/v1/sources"),
       api("/api/v1/incidents?limit=100"),
       api("/api/v1/actions?limit=100"),
       api("/api/v1/audit?limit=100"),
       api("/api/v1/stats"),
       api("/api/v1/runtime"),
     ]);
-    Object.assign(state, { alerts, incidents, actions, audit, stats, runtime });
+    Object.assign(state, { alerts, events, sources, incidents, actions, audit, stats, runtime });
     render();
     if (!silent) toast("Console synchronized", "success");
   } catch (error) {
@@ -176,7 +181,9 @@ function render() {
   $("#bootNotice")?.classList.add("hidden");
   renderRuntime();
   renderStats();
+  renderSources();
   renderAlerts();
+  renderEvents();
   renderIncidents();
   renderActions();
   renderAudit();
@@ -192,11 +199,96 @@ function renderRuntime() {
   const syslog = state.runtime.syslog || {};
   const queue = syslog.queue || {};
   $("#syslogStatus").textContent = syslog.enabled
-    ? `${syslog.port}/UDP · Q${queue.queue_size ?? 0} · D${queue.dropped ?? 0}`
+    ? `${syslog.port}/UDP · RX ${queue.received ?? 0} · DROP ${queue.dropped ?? 0}`
     : "OFF";
   const warnings = state.runtime.warnings || [];
   $("#warningBanner").classList.toggle("hidden", !warnings.length);
   $("#warningBanner").textContent = warnings.join(" ");
+}
+
+function renderSources() {
+  const sources = state.sources || [];
+  const sourceLabels = {
+    opnsense: "OPNsense firewall", apache: "Apache web", suricata: "Suricata IDS",
+    windows: "Windows events", ubuntu: "Ubuntu/Linux", splunk: "Splunk HEC", generic: "Generic / unmapped",
+  };
+  $("#sourceSummaryCount").textContent = `${sources.length} nguồn có dữ liệu`;
+  $("#navEventCount").textContent = state.stats.security_events ?? sources.reduce((n, item) => n + item.events, 0);
+  const sourceCards = $("#sourceCards");
+  if (sources.length) {
+    sourceCards.innerHTML = sources.map((item) => `
+      <button class="source-card" data-source="${esc(item.source)}" title="Mở event từ nguồn ${esc(item.source)}">
+        <span class="source-led"></span><span class="source-card-copy"><b>${esc(sourceLabels[item.source] || item.source)}</b><small>${esc(item.source)}</small></span>
+        <strong>${Number(item.events).toLocaleString("vi-VN")}</strong><span class="source-last">${ago(item.last_seen)}</span>
+      </button>`).join("");
+  } else {
+    sourceCards.innerHTML = `<div class="source-none"><b>Chưa có security event nào trong cơ sở dữ liệu.</b><span>Kiểm tra UDP Syslog counter bên cạnh; nếu RX tăng nhưng bảng này vẫn rỗng thì worker/pipeline cần xem trong API logs.</span></div>`;
+  }
+  $$("#sourceCards [data-source]").forEach((button) => button.onclick = () => {
+    switchView("events");
+    $("#eventSourceFilter").value = button.dataset.source;
+    refreshAll(true);
+  });
+
+  const syslog = state.runtime.syslog || {};
+  const queue = syslog.queue || {};
+  const received = Number(queue.received || 0);
+  const processed = Number(queue.processed || 0);
+  const dropped = Number(queue.dropped || 0);
+  const failed = Number(queue.failed || 0);
+  $("#syslogCounters").innerHTML = [
+    ["Đã nhận", received], ["Đã xử lý", processed], ["Đang chờ", `${queue.queue_size ?? 0} / ${queue.queue_maxsize ?? 0}`], ["Bị rơi", dropped], ["Lỗi xử lý", failed],
+  ].map(([label, value]) => `<div class="syslog-counter"><span>${label}</span><strong>${Number.isFinite(value) ? Number(value).toLocaleString("vi-VN") : esc(value)}</strong></div>`).join("");
+  const lastReceived = queue.last_received_at;
+  const recentlyActive = lastReceived && (Date.now() - new Date(lastReceived).getTime()) < 60000;
+  const badge = $("#syslogLiveBadge");
+  badge.className = `source-state ${!syslog.enabled ? "off" : recentlyActive ? "live" : "idle"}`;
+  badge.textContent = !syslog.enabled ? "Tắt" : recentlyActive ? "Đang nhận log" : received ? "Đang nghe · chưa có log mới" : "Đang nghe · chưa nhận log";
+  $("#syslogLastSeen").textContent = lastReceived
+    ? `Datagram gần nhất: ${formatTime(lastReceived)}`
+    : `Chưa nhận datagram trong lần chạy API này · UDP/${syslog.port || 5514}`;
+
+  const sourceFilter = $("#eventSourceFilter");
+  const selectedSource = sourceFilter.value;
+  const options = sources.map((item) => `<option value="${esc(item.source)}">${esc(sourceLabels[item.source] || item.source)} (${Number(item.events).toLocaleString("vi-VN")})</option>`).join("");
+  sourceFilter.innerHTML = `<option value="">Tất cả nguồn</option>${options}`;
+  if (sources.some((item) => item.source === selectedSource)) sourceFilter.value = selectedSource;
+}
+
+function renderEvents() {
+  const events = state.events || [];
+  $("#eventRows").innerHTML = events.map((event) => {
+    const rawText = typeof event.raw_event === "string" ? event.raw_event : JSON.stringify(event.raw_event || {});
+    const preview = rawText.length > 180 ? `${rawText.slice(0, 177)}…` : rawText;
+    return `<tr data-event-id="${esc(event.id)}">
+      <td>${formatTime(event.received_at)}</td>
+      <td><span class="event-source">${esc(event.source)}</span></td>
+      <td>${esc(event.event_type)}</td>
+      <td><button class="event-alert-link" data-alert-id="${esc(event.alert_id)}">${esc(event.alert_id)}</button></td>
+      <td><code class="event-preview">${esc(preview)}</code></td>
+      <td><button class="event-inspect" data-inspect-event="${esc(event.id)}">Chi tiết</button></td>
+    </tr>`;
+  }).join("");
+  $("#eventResultCount").textContent = `${events.length} bản ghi gần nhất`;
+  $("#eventEmpty").classList.toggle("hidden", events.length > 0);
+  $$('[data-inspect-event]').forEach((button) => button.onclick = () => openEvent(button.dataset.inspectEvent));
+  $$("[data-alert-id]").forEach((button) => button.onclick = (event) => {
+    event.stopPropagation();
+    switchView("alerts");
+    openAlert(button.dataset.alertId);
+  });
+}
+
+function openEvent(id) {
+  const event = state.events.find((item) => item.id === id);
+  if (!event) return;
+  $("#detailContent").innerHTML = `<div class="detail-body event-detail">
+    <p class="eyebrow">RAW EVENT / ${esc(event.id)}</p><h2>${esc(event.source)} · ${esc(event.event_type)}</h2>
+    <div class="detail-grid"><div><span>Received at</span><strong>${formatTime(event.received_at)}</strong></div><div><span>Event timestamp</span><strong>${formatTime(event.event_timestamp)}</strong></div><div><span>Linked alert</span><strong>${esc(event.alert_id)}</strong></div></div>
+    <div class="detail-section"><h3>Raw evidence</h3><pre class="evidence-box">${esc(JSON.stringify(event.raw_event, null, 2))}</pre></div>
+    <div class="detail-section"><h3>Normalized event</h3><pre class="evidence-box">${esc(JSON.stringify(event.normalized_event, null, 2))}</pre></div>
+  </div>`;
+  $("#detailDialog").showModal();
 }
 
 function renderStats() {
@@ -394,6 +486,7 @@ function renderAudit() {
 function switchView(view) {
   const labels = {
     overview: ["OVERVIEW", "Live defense posture"], alerts: ["ALERT QUEUE", "Detection workbench"],
+    events: ["RAW EVENTS", "Security event explorer"],
     incidents: ["INCIDENTS", "Cases and reports"], response: ["RESPONSE", "Human approval gates"], audit: ["AUDIT TRAIL", "Operational accountability"],
   };
   $$(".view").forEach((item) => item.classList.toggle("active", item.id === `view-${view}`));
@@ -420,6 +513,7 @@ $("#demoButton").onclick = generateDemo;
 $("#detailClose").onclick = () => $("#detailDialog").close();
 $("#severityFilter").onchange = renderAlerts;
 $("#statusFilter").onchange = renderAlerts;
+$("#eventSourceFilter").onchange = () => refreshAll(true);
 $("#decisionCancel").onclick = () => $("#decisionDialog").close();
 $("#decisionForm").addEventListener("submit", (event) => { event.preventDefault(); submitDecision(); });
 $$(".nav-item").forEach((button) => button.onclick = () => switchView(button.dataset.view));
@@ -428,6 +522,9 @@ $$("[data-jump]").forEach((button) => button.onclick = () => switchView(button.d
 function startDashboard() {
   render();
   setInterval(() => { $("#clock").textContent = new Date().toLocaleTimeString("vi-VN"); }, 1000);
+  setInterval(() => {
+    if (state.token && document.visibilityState === "visible") refreshAll(true);
+  }, 15000);
   $("#clock").textContent = new Date().toLocaleTimeString("vi-VN");
   if (state.token) authenticate(state.token);
   else lockConsole("Nhập SOC_ADMIN_TOKEN để mở dashboard.");

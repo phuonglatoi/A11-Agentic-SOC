@@ -2002,3 +2002,64 @@ td { color:#344e60 !important; font-size:13px !important; border-color:#e5ebf0 !
 .boot-notice { color:#203a4d !important; background:#fff !important; border-color:#cbd9e3 !important; }
 .boot-notice span { color:#526b7d !important; }
 @media (max-width:740px) { .detail-body{padding:20px !important;} .detail-grid{grid-template-columns:1fr 1fr !important;} }
+
+/* SOC analyst layout: make intake health and event evidence first-class. */
+.hero-card { min-height:150px !important; padding:24px !important; }
+.hero-card h2 { font-size:clamp(25px,2.4vw,34px) !important; line-height:1.08 !important; }
+.hero-copy { color:#4d6678 !important; font-size:14px !important; max-width:72ch; }
+.network-card { min-height:150px !important; padding:16px !important; }
+.node { min-height:62px !important; background:#f7fafc !important; border-color:#dce5ec !important; }
+.node span { color:#233f53 !important; }
+.node b { color:#526e81 !important; font-size:11px !important; }
+.metrics { margin-bottom:14px !important; }
+.metric { min-height:112px !important; border-radius:10px !important; }
+.telemetry-overview { display:grid !important; grid-template-columns:minmax(0,1.5fr) minmax(300px,.8fr); gap:14px; margin:14px 0; }
+.source-panel, .syslog-panel { min-width:0; }
+.source-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:8px; padding:14px; }
+.source-card { display:grid; grid-template-columns:10px minmax(0,1fr) auto; gap:5px 10px; align-items:center; text-align:left; min-width:0; padding:11px 12px; border:1px solid #dce5ec; border-radius:8px; background:#f9fbfc; color:#263f52; cursor:pointer; }
+.source-card:hover { border-color:#84b9cf; background:#eef7fa; }
+.source-led { width:8px; height:8px; border-radius:50%; background:#15956a; box-shadow:0 0 0 3px #e1f4ec; }
+.source-card-copy { min-width:0; }
+.source-card-copy b, .source-card-copy small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.source-card-copy b { font-size:12px; }
+.source-card-copy small { color:#637b8c; margin-top:2px; font:10px ui-monospace,Consolas,monospace; }
+.source-card > strong { color:#193c54; font-size:16px; text-align:right; }
+.source-last { grid-column:2 / 4; color:#60798b; font-size:10px; }
+.source-summary-count { color:#426074; background:#edf3f6; border:1px solid #d9e3e9; border-radius:5px; padding:5px 8px; font-size:11px; white-space:nowrap; }
+.source-none { display:grid; gap:6px; padding:18px; color:#3e596b; font-size:13px; }
+.source-none span { color:#627a8b; line-height:1.5; }
+.panel-footnote { margin:0; padding:0 14px 13px; color:#667e8d; font-size:11px; line-height:1.5; }
+.syslog-panel .panel-head { min-height:62px !important; }
+.syslog-counters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:14px; }
+.syslog-counter { display:grid; gap:5px; padding:9px 10px; border:1px solid #e1e8ed; border-radius:7px; background:#f8fafb; }
+.syslog-counter span { color:#587182; font-size:10px; }
+.syslog-counter strong { color:#203e52; font-size:18px; font-variant-numeric:tabular-nums; }
+.syslog-counter:nth-child(4) strong, .syslog-counter:nth-child(5) strong { color:#a63936; }
+.source-state { padding:5px 9px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
+.source-state.live { color:#126342; background:#e7f6ef; border:1px solid #b9e4cd; }
+.source-state.idle { color:#775916; background:#fff7df; border:1px solid #efdfa8; }
+.source-state.off { color:#9a3243; background:#fff0f2; border:1px solid #efc7ce; }
+.view#view-events > .panel { overflow:hidden; }
+.event-workbench .panel-head { align-items:flex-start; gap:16px; }
+.panel-subtitle { color:#617889; margin:6px 0 0; font-size:12px; line-height:1.5; }
+.event-workbench .filters { display:flex; align-items:center; gap:8px; }
+.event-workbench .filters label { color:#4e6879; font-size:12px; }
+.event-workbench select { min-width:180px; padding:9px 30px 9px 10px; border:1px solid #ccd9e2; border-radius:6px; background:#fff; color:#29485c; }
+.event-table { min-width:1050px !important; table-layout:auto; }
+.event-table th, .event-table td { padding:12px 14px !important; }
+.event-source { display:inline-flex; padding:4px 7px; border-radius:5px; color:#18536f; background:#eaf4f8; font:650 11px ui-monospace,Consolas,monospace; }
+.event-preview { display:block; max-width:420px; overflow:hidden; color:#354f60; text-overflow:ellipsis; white-space:nowrap; font:11px ui-monospace,Consolas,monospace; }
+.event-alert-link, .event-inspect { padding:5px 7px; border:0; border-radius:5px; background:#eef4f7; color:#176585; cursor:pointer; font-size:11px; }
+.event-alert-link:hover, .event-inspect:hover { background:#dceef4; }
+.event-detail .evidence-box { max-height:360px; overflow:auto; }
+#eventEmpty { color:#566f80; }
+.event-workbench .empty-state h3 { color:#263f52 !important; }
+.nav-item[data-view="events"] .nav-icon { font-size:20px; }
+@media (max-width:1100px) { .telemetry-overview { grid-template-columns:1fr; } }
+@media (max-width:740px) {
+  .event-workbench .panel-head { display:grid; }
+  .event-workbench .filters { flex-wrap:wrap; }
+  .event-workbench select { min-width:145px; }
+  .source-cards { grid-template-columns:1fr; }
+  .syslog-counters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}

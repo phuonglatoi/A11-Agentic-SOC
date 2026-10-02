@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
+from typing import Any
 
 from app.database import Database
 from app.pipeline import SOCPipeline
@@ -28,6 +30,8 @@ class SyslogProtocol(asyncio.DatagramProtocol):
         self.received = 0
         self.processed = 0
         self.dropped = 0
+        self.failed = 0
+        self.last_received_at: str | None = None
 
     def connection_made(self, transport) -> None:
         self.workers = [
@@ -38,6 +42,7 @@ class SyslogProtocol(asyncio.DatagramProtocol):
     def datagram_received(self, data: bytes, addr) -> None:
         message = data.decode("utf-8", errors="replace").strip()
         self.received += 1
+        self.last_received_at = datetime.now(timezone.utc).isoformat()
         try:
             self.queue.put_nowait((message, addr))
         except asyncio.QueueFull:
@@ -54,7 +59,7 @@ class SyslogProtocol(asyncio.DatagramProtocol):
         for worker in self.workers:
             worker.cancel()
 
-    def stats(self) -> dict[str, int]:
+    def stats(self) -> dict[str, Any]:
         return {
             "queue_size": self.queue.qsize(),
             "queue_maxsize": self.queue.maxsize,
@@ -62,6 +67,8 @@ class SyslogProtocol(asyncio.DatagramProtocol):
             "received": self.received,
             "processed": self.processed,
             "dropped": self.dropped,
+            "failed": self.failed,
+            "last_received_at": self.last_received_at,
         }
 
     async def _worker(self, index: int) -> None:
@@ -69,14 +76,16 @@ class SyslogProtocol(asyncio.DatagramProtocol):
         while True:
             message, addr = await self.queue.get()
             try:
-                await self._process(message, addr)
-                self.processed += 1
+                if await self._process(message, addr):
+                    self.processed += 1
+                else:
+                    self.failed += 1
             finally:
                 self.queue.task_done()
 
-    async def _process(self, message: str, addr) -> None:
-        with self.database.session_factory() as db:
-            try:
+    async def _process(self, message: str, addr) -> bool:
+        try:
+            with self.database.session_factory() as db:
                 alert = await self.pipeline.process(
                     db,
                     message,
@@ -89,5 +98,7 @@ class SyslogProtocol(asyncio.DatagramProtocol):
                     alert.id,
                     alert.severity,
                 )
-            except Exception:
-                logger.exception("Failed to process a syslog datagram from %s", addr)
+            return True
+        except Exception:
+            logger.exception("Failed to process a syslog datagram from %s", addr)
+            return False
