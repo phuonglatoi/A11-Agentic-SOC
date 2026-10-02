@@ -104,6 +104,30 @@ def triage_event(
                 ]
             )
 
+    elif event_type == "network.flow":
+        web_ports = {80, 443, 8000, 8080, 8443}
+        dst_port = event.get("dst_port")
+        if event_count >= 100 and dst_port in web_ports:
+            severity = "high"
+            confidence = min(0.94, 0.72 + event_count * 0.001)
+            title_override = "Possible network-flow HTTP flood / DoS"
+            reasons.append(
+                "At least 100 correlated flow records targeted the same web-facing service in the correlation window."
+            )
+            mitre.extend(
+                [
+                    {"id": "T1498", "name": "Network Denial of Service"},
+                    {"id": "T1499", "name": "Endpoint Denial of Service"},
+                ]
+            )
+            recommendations.extend(
+                [
+                    "Validate the flow burst against OPNsense and web-server telemetry.",
+                    "Check service latency, connection counts and interface throughput.",
+                    "Confirm that the source belongs to an approved lab scenario before containment.",
+                ]
+            )
+
     elif event_type.startswith("opnsense.firewall_"):
         action = str(event.get("firewall_action") or "").lower()
         direction = str(event.get("firewall_direction") or "").lower()
@@ -169,13 +193,6 @@ def triage_event(
             )
         ml_attack_type = str(ml_prediction.get("attack_type") or "")
         ml_confidence = float(ml_prediction.get("confidence") or 0.0)
-        ml_high_confidence_network_attack = (
-            ml_prediction.get("enabled")
-            and ml_prediction.get("status") == "ok"
-            and ml_attack_type in {"network_scan", "http_flood_dos"}
-            and ml_confidence >= 0.70
-        )
-
         if (
             firewall_ml_eligible
             and event_count >= 50
@@ -222,15 +239,11 @@ def triage_event(
             and protocol == "tcp"
             and (
                 event_count >= 20
-                or ml_high_confidence_network_attack
                 or (lab_source and event_count >= 5)
             )
         ):
             severity = "high"
-            confidence = max(
-                min(0.94, 0.68 + event_count * 0.004),
-                min(0.94, ml_confidence) if ml_high_confidence_network_attack else 0,
-            )
+            confidence = min(0.94, 0.68 + event_count * 0.004)
             title_override = (
                 "Possible HTTP flood / DoS traffic"
                 if ml_attack_type == "http_flood_dos" and dst_port in web_ports
@@ -253,9 +266,9 @@ def triage_event(
                     "The source belongs to the controlled lab network, so a short burst "
                     "is escalated for demonstration and reporting evidence."
                 )
-            if ml_high_confidence_network_attack:
+            if ml_attack_type in {"network_scan", "http_flood_dos"} and ml_confidence >= 0.70:
                 reasons.append(
-                    "The ML Detection Agent classified this firewall pattern as "
+                    "The deterministic event-volume rule was corroborated by the ML Detection Agent, which classified this firewall pattern as "
                     f"{ml_attack_type} with confidence {ml_confidence:.0%}."
                 )
             if ml_attack_type == "http_flood_dos" and dst_port in web_ports:
@@ -332,7 +345,6 @@ def triage_event(
     if ml_prediction.get("enabled") and ml_prediction.get("status") == "ok":
         attack_type = str(ml_prediction.get("attack_type") or "")
         ml_confidence = float(ml_prediction.get("confidence") or 0.0)
-        ml_severity = str(ml_prediction.get("severity") or "low")
         firewall_network_prediction = (
             event_type.startswith("opnsense.firewall_")
             and attack_type in {"network_scan", "http_flood_dos"}
@@ -344,25 +356,14 @@ def triage_event(
                 "Treat this record as infrastructure telemetry unless corroborated by an inbound sensor or application log."
             )
         elif attack_type and attack_type != "benign" and ml_confidence >= 0.65:
-            if (
-                event_type.startswith("opnsense.firewall_")
-                and attack_type in {"network_scan", "http_flood_dos"}
-                and ml_confidence >= 0.70
-            ):
-                ml_severity = "high"
-                if attack_type == "network_scan":
-                    title_override = "Probable network scan / reconnaissance"
-                elif attack_type == "http_flood_dos":
-                    title_override = "Possible HTTP flood / DoS traffic"
-            severity = max_severity(severity, ml_severity)
             confidence = max(confidence, min(0.97, ml_confidence))
             reasons.append(
                 "ML Detection Agent predicted "
                 f"{attack_type} with confidence {ml_confidence:.0%}."
             )
             _append_mitre(mitre, ml_prediction.get("mitre"))
-            if ml_prediction.get("recommended_title") and SEVERITY_RANK[ml_severity] >= 3:
-                title_override = title_override or ml_prediction["recommended_title"]
+            if ml_prediction.get("recommended_title") and not title_override:
+                title_override = ml_prediction["recommended_title"]
             if ml_prediction.get("recommended_description"):
                 description_override = (
                     description_override or ml_prediction["recommended_description"]

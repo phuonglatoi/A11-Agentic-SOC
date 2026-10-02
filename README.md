@@ -1,12 +1,18 @@
 # A11 Agentic SOC Automation
 
-## 2026 update: Dataset + ML Detection Agent
+## Dataset + ML Detection Agent
 
-The project now includes a local **ML Detection Agent** trained from sanitized
-seed events and designed to be retrained with **DataSense: CIC IIoT dataset
-2025**. This dataset is the recommended latest benchmark for the A11 lab because
-it covers HTTP Flood/DoS/DDoS, Recon/Nmap, Web SQL Injection/XSS, brute force,
-MITM/spoofing and Mirai-like malware scenarios.
+The project includes a local **ML Detection Agent** and an adapter for the
+CICIDS2017 CICFlowMeter CSV files in
+`C:\Users\Admin\Documents\MachineLearningCVE`. CICIDS2017 is an older,
+public intrusion-detection benchmark, not a current-production traffic sample.
+Its flow features can support controlled lab experiments for benign traffic,
+port scans, DoS/DDoS, web attacks, brute force, Bot and Infiltration. The
+adapter buckets continuous numeric values, excludes flow IDs, IP addresses,
+timestamps and labels from model features, and preserves the original row as
+raw evidence when replayed. CICIDS flow predictions apply to flow-feature input;
+they should not be treated as a validated classifier for arbitrary syslog,
+Windows, or Apache records.
 
 Runtime flow:
 
@@ -21,10 +27,11 @@ OPNsense / Apache / Suricata / Windows log
   -> n8n attack analysis + Mailpit email or OPNsense adapter
 ```
 
-n8n acts as the SOAR automation layer. It receives high/critical alert and
-approved response webhooks, classifies the attack again from the SOC payload,
-sends a local email notification to Mailpit, and writes an automation audit
-record back to A11 SOC.
+n8n acts as the SOAR automation layer. Primary flow classification and
+severity triage happen in the A11 API; n8n receives qualifying alert and
+analyst-approved response webhooks, formats/routes the notification to Mailpit,
+and writes automation audit records back to A11 SOC. n8n does not train the ML
+model, independently infer severity, or bypass the approval gate.
 
 Train the bundled demo model:
 
@@ -34,15 +41,57 @@ python3 scripts/train_attack_classifier.py \
   --output models/attack_classifier.json
 ```
 
-Train with an official DataSense/CIC CSV after downloading it:
+Train on the local CICIDS2017 directory (PowerShell):
 
-```bash
-python3 scripts/train_attack_classifier.py \
-  --input datasets/a11_seed_labeled_events.jsonl \
-  --csv /path/to/DataSense_or_CIC_dataset.csv \
-  --sample-per-class 5000 \
+```powershell
+python scripts/train_attack_classifier.py `
+  --input datasets/a11_seed_labeled_events.jsonl `
+  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
+  --sample-per-class 250 `
+  --split train --holdout-percent 20 `
   --output models/attack_classifier.json
 ```
+
+`--sample-per-class` is a deterministic reservoir cap **per class per CSV**;
+the reader streams the large files and does not load all 2.3M rows into memory.
+Use the same deterministic train/test partition and holdout percentage in both
+commands; identical raw rows always stay in one partition. This avoids directly
+reusing a row for both fitting and evaluation. The test command reports a
+stratified sample, so inspect macro metrics and per-class support as well as
+accuracy; these results are a lab benchmark, not a production SLA.
+
+```powershell
+python scripts/train_attack_classifier.py `
+  --input datasets/a11_seed_labeled_events.jsonl `
+  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
+  --sample-per-class 250 `
+  --split train --holdout-percent 20 `
+  --output models/attack_classifier.json
+
+python scripts/benchmark_attack_classifier.py `
+  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
+  --split test --holdout-percent 20 `
+  --max-per-class 250 `
+  --sample-size 1000 `
+  --output work/cicids2017_holdout.json
+```
+
+Replay a small labeled category into the local A11 API for end-to-end telemetry
+testing. The script uses the dataset label only to select rows; it removes the
+label before posting each event. Set the ingestion key in the environment:
+
+```powershell
+$env:SOC_API_KEY = "<your-ingest-key>"
+python scripts/replay_cicids_flows.py `
+  "C:\Users\Admin\Documents\MachineLearningCVE\Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv" `
+  --label http_flood_dos --rows 120 --interval-ms 100
+```
+
+An incident/email requires at least 100 records to correlate under the same
+source, destination and service fingerprint within the configured window, and
+`NOTIFICATION_WEBHOOK_URL` must target the active production n8n alert webhook.
+Check event count and severity in Alert Queue; traffic split across fingerprints
+will not pass the threshold just because ML labeled it as a flood.
 
 Hệ thống SOC real-time chạy cục bộ, được hiện thực hóa từ hai tài liệu TTTN:
 OPNsense/Apache/Splunk làm nguồn telemetry và Agentic AI làm lớp tự động hóa
@@ -60,6 +109,14 @@ triage, enrichment, RAG, incident, report và response có phê duyệt.
   vào cùng một alert.
 - Alert Triage Agent đánh mức `Low / Medium / High / Critical`, độ tin cậy,
   MITRE ATT&CK và khuyến nghị.
+- ML Detection Agent phân loại loại hành vi và cung cấp confidence/MITRE để
+  bổ sung ngữ cảnh; severity vẫn do rule, sensor có thẩm quyền và correlation
+  xác định. Ollama chỉ diễn giải, không quyết severity hay tự thực thi.
+- CICIDS2017 flow adapter có ánh xạ nhãn, stream/reservoir sampling, benchmark
+  Accuracy/Precision/Recall/F1/Confusion Matrix và script replay vào REST API.
+  Flow web chỉ được nâng severity bởi rule tương quan độc lập với ML khi có ít
+  nhất 100 flow cùng fingerprint trong cửa sổ cấu hình; dự đoán ML đơn lẻ không
+  gửi email hay tạo response action.
 - Enrichment Agent tra asset inventory, IOC cục bộ và thuộc tính IP.
 - RAG Agent tra playbook trong thư mục `knowledge/`, không gửi dữ liệu ra cloud.
 - Ollama tùy chọn cho phân tích bổ sung; hệ thống vẫn hoạt động khi LLM tắt/lỗi.
@@ -69,6 +126,20 @@ triage, enrichment, RAG, incident, report và response có phê duyệt.
   analyst; mọi bước được ghi audit log.
 - Dashboard SSE real-time, không phụ thuộc CDN nên hoạt động offline.
 - OPNsense adapter, generic webhook adapter, Splunk search poller và n8n profile.
+
+Các nhãn CICIDS2017 được chuẩn hóa: `BENIGN → benign`; `PortScan →
+network_scan`; `DDoS/DoS/GoldenEye/Slowloris → http_flood_dos`; `FTP/SSH
+Patator` và Web Brute Force → `brute_force`; SQL Injection →
+`sql_injection_probe`; XSS → `web_attack`; `Bot → botnet_activity`; và
+`Infilteration → infiltration`. Một số lớp rất hiếm (ví dụ SQL Injection,
+Infiltration) có ít mẫu, nên cần báo cáo support cùng điểm số.
+
+**Benchmark split train/test trên thư mục CICIDS2017 hiện có:** 1.000 mẫu test
+phân tầng, Accuracy 0.8610, Macro Precision 0.8592, Macro Recall 0.8313,
+Macro F1 0.8358; attack TPR 0.9916 và FPR 0.1882 trên mẫu test đã lấy mẫu.
+Infiltration chỉ có 5 và SQL Injection 6 mẫu trong mẫu test này. Đây là baseline
+để demo/nghiên cứu, không đại diện tỷ lệ lưu lượng production; xem confusion
+matrix, support và [kết quả đầy đủ](work/cicids2017_holdout.json).
 
 ## Kiến trúc
 

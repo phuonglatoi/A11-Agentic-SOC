@@ -23,6 +23,7 @@ except ModuleNotFoundError:
     from train_attack_classifier import LABEL_COLUMNS, normalize_label
 
 from app.agents.ml_detector import MLDetectionAgent
+from app.agents.flow_features import canonical_flow_features, holdout_partition
 
 
 def read_jsonl(path: Path) -> list[tuple[str, dict[str, Any]]]:
@@ -40,22 +41,52 @@ def read_jsonl(path: Path) -> list[tuple[str, dict[str, Any]]]:
     return examples
 
 
-def read_csv(path: Path) -> list[tuple[str, dict[str, Any]]]:
-    examples: list[tuple[str, dict[str, Any]]] = []
+def read_csv(
+    path: Path,
+    max_per_class: int | None = 250,
+    seed: int = 11,
+    split: str = "all",
+    holdout_percent: int = 20,
+) -> list[tuple[str, dict[str, Any]]]:
+    """Read a bounded, deterministic per-class sample from a large CSV."""
+    buckets: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    seen: Counter[str] = Counter()
+    rng = random.Random(seed)
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
-            return examples
+            return []
+        reader.fieldnames = [str(name or "").strip() for name in reader.fieldnames]
         label_column = next(
-            (column for column in LABEL_COLUMNS if column in reader.fieldnames),
+            (column for column in LABEL_COLUMNS if column.strip() in reader.fieldnames),
             reader.fieldnames[-1],
         )
         for row in reader:
+            row = {str(key or "").strip(): value for key, value in row.items()}
+            if split != "all" and holdout_partition(row, holdout_percent) != split:
+                continue
             expected = normalize_label(row.pop(label_column, None))
-            event = {key: value for key, value in row.items() if value not in {None, ""}}
-            if event:
-                examples.append((expected, event))
-    return examples
+            if row:
+                seen[expected] += 1
+                candidate = row
+                if max_per_class is None or len(buckets[expected]) < max_per_class:
+                    buckets[expected].append(candidate)
+                else:
+                    index = rng.randrange(seen[expected])
+                    if index < max_per_class:
+                        buckets[expected][index] = candidate
+    return [
+        (
+            label,
+            {
+                "source": "cicids_flow",
+                "event_type": "network.flow",
+                "flow_features": canonical_flow_features(row),
+            },
+        )
+        for label in sorted(buckets)
+        for row in buckets[label]
+    ]
 
 
 def safe_div(numerator: int, denominator: int) -> float:
@@ -184,6 +215,7 @@ def binary_detection_metrics(
 def evaluate(
     agent: MLDetectionAgent,
     examples: Iterable[tuple[str, dict[str, Any]]],
+    include_failure_events: bool = False,
 ) -> dict[str, Any]:
     rows = list(examples)
     labels = sorted({expected for expected, _ in rows})
@@ -199,15 +231,15 @@ def evaluate(
         confusion[expected][predicted] += 1
         confidence_sum += confidence
         if predicted != expected:
-            failures.append(
-                {
-                    "row": index,
-                    "expected": expected,
-                    "predicted": predicted,
-                    "confidence": round(confidence, 4),
-                    "event": event,
-                }
-            )
+            failure = {
+                "row": index,
+                "expected": expected,
+                "predicted": predicted,
+                "confidence": round(confidence, 4),
+            }
+            if include_failure_events:
+                failure["event"] = event
+            failures.append(failure)
 
     predicted_labels = sorted(
         {predicted for counts in confusion.values() for predicted in counts}
@@ -281,6 +313,31 @@ def main() -> None:
         help="Held-out CIC/DataSense CSV. Do not reuse training rows.",
     )
     parser.add_argument(
+        "--csv-dir",
+        action="append",
+        type=Path,
+        default=[],
+        help="Read top-level *.csv files from an external dataset directory.",
+    )
+    parser.add_argument(
+        "--max-per-class",
+        type=int,
+        default=250,
+        help="Maximum reservoir-sampled rows per class per CSV (default: 250; 0 means all).",
+    )
+    parser.add_argument(
+        "--split",
+        choices=("all", "train", "test"),
+        default="all",
+        help="Use the deterministic exact-row partition selected during training.",
+    )
+    parser.add_argument(
+        "--holdout-percent",
+        type=int,
+        default=20,
+        help="Must match the training partition (default: 20 percent test).",
+    )
+    parser.add_argument(
         "--model",
         type=Path,
         default=Path("models/attack_classifier.json"),
@@ -319,9 +376,16 @@ def main() -> None:
         default=11,
         help="Random seed recorded with stratified benchmark sampling.",
     )
+    parser.add_argument(
+        "--include-failure-events",
+        action="store_true",
+        help="Include raw feature rows for errors in the JSON report (may expose dataset content).",
+    )
     args = parser.parse_args()
+    if not 1 <= args.holdout_percent <= 99:
+        parser.error("--holdout-percent must be between 1 and 99")
 
-    if not args.input and not args.csv:
+    if not args.input and not args.csv and not args.csv_dir:
         args.input = [Path("datasets/a11_benchmark_labeled_events.jsonl")]
 
     agent = MLDetectionAgent(args.model)
@@ -332,7 +396,18 @@ def main() -> None:
     for path in args.input:
         examples.extend(read_jsonl(path))
     for path in args.csv:
-        examples.extend(read_csv(path))
+        examples.extend(
+            read_csv(path, max_per_class=args.max_per_class or None, seed=args.seed,
+                     split=args.split, holdout_percent=args.holdout_percent)
+        )
+    for directory in args.csv_dir:
+        if not directory.is_dir():
+            parser.error(f"CSV directory does not exist: {directory}")
+        for path in sorted(directory.glob("*.csv")):
+            examples.extend(
+                read_csv(path, max_per_class=args.max_per_class or None, seed=args.seed,
+                         split=args.split, holdout_percent=args.holdout_percent)
+            )
     if not examples:
         raise SystemExit("No benchmark examples were found.")
 
@@ -355,11 +430,18 @@ def main() -> None:
             "selected_by_label": dict(sorted(distribution.items())),
         }
 
-    results = evaluate(agent, examples)
+    results = evaluate(
+        agent, examples, include_failure_events=args.include_failure_events
+    )
     results["generated_at"] = datetime.now(timezone.utc).isoformat()
     results["model"] = agent.stats()
-    results["datasets"] = [str(path) for path in [*args.input, *args.csv]]
+    results["datasets"] = [str(path) for path in [*args.input, *args.csv, *args.csv_dir]]
     results["sampling"] = sampling
+    results["partition"] = {
+        "method": "blake2s_exact_raw_row_mod_100",
+        "split": args.split,
+        "holdout_percent": args.holdout_percent if args.split != "all" else None,
+    }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(results, indent=2, ensure_ascii=False) + "\n",

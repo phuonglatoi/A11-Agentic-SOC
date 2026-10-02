@@ -6,6 +6,8 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+from app.agents.flow_features import canonical_flow_features
+
 
 APACHE_COMBINED = re.compile(
     r'(?P<src_ip>\S+) \S+ (?P<user>\S+) \[(?P<timestamp>[^\]]+)\] '
@@ -242,7 +244,20 @@ def normalize_event(
         if value
     ).lower()
 
-    if "alert" in data and (
+    if "cicids_flow" in source_text or "cicids2017" in source_text:
+        normalized = {
+            "source": source_hint or "cicids_flow",
+            "timestamp": _timestamp(data.get("timestamp") or data.get("Timestamp")),
+            "event_type": "network.flow",
+            "title": "CICIDS2017 network flow",
+            "message": "Labeled flow telemetry received from the CICIDS2017 dataset replay.",
+            "src_ip": data.get("src_ip") or data.get("Source IP"),
+            "dst_ip": data.get("dst_ip") or data.get("Destination IP"),
+            "dst_port": _as_int(data.get("dst_port") or data.get("Destination Port")),
+            "flow_features": canonical_flow_features(data),
+            "sensor_severity": None,
+        }
+    elif "alert" in data and (
         data.get("event_type") or "suricata" in source_text or "eve" in source_text
     ):
         normalized = _suricata(data)

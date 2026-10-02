@@ -16,7 +16,7 @@ def _flatten(value: Any, prefix: str = "") -> list[str]:
     if isinstance(value, dict):
         output: list[str] = []
         for key, nested in value.items():
-            if key in {"raw", "filterlog_fields"}:
+            if key in {"raw", "filterlog_fields", "flow_features"}:
                 continue
             output.extend(_flatten(nested, f"{prefix}{key}."))
         return output
@@ -28,9 +28,16 @@ def _flatten(value: Any, prefix: str = "") -> list[str]:
 def event_to_text(event: dict[str, Any], event_count: int = 1) -> str:
     parts = _flatten(event)
     raw = event.get("raw")
-    if isinstance(raw, dict):
+    is_flow_dataset = str(event.get("source") or "").lower() in {
+        "cicids_flow", "cicids2017"
+    }
+    if is_flow_dataset and isinstance(event.get("flow_features"), dict):
+        parts.extend(
+            f"{key}={value}" for key, value in event["flow_features"].items()
+        )
+    if isinstance(raw, dict) and not is_flow_dataset:
         parts.extend(_flatten(raw))
-    elif raw:
+    elif raw and not is_flow_dataset:
         parts.append(str(raw))
     parts.append(f"event_count:{event_count}")
     if event_count >= 50:
@@ -99,8 +106,13 @@ class MLDetectionAgent:
             "status": "ok",
             "path": str(self.model_path),
             "version": self.model.get("version"),
-            "labels": self.model.get("labels", []),
-            "total_docs": self.model.get("total_docs", 0),
+            "labels": sorted(
+                set(self.model.get("labels", []))
+                | set((self.model.get("flow_model") or {}).get("labels", []))
+            ),
+            "total_docs": self.model.get("total_docs", 0)
+            + (self.model.get("flow_model") or {}).get("total_docs", 0),
+            "domains": self.model.get("training_domains", ["seed_events"]),
         }
 
     def detect(self, event: dict[str, Any], event_count: int = 1) -> dict[str, Any]:
@@ -108,6 +120,18 @@ class MLDetectionAgent:
             return {
                 "enabled": False,
                 "status": "model_not_found",
+                "attack_type": None,
+                "confidence": 0.0,
+            }
+
+        is_flow_dataset = str(event.get("source") or "").lower() in {
+            "cicids_flow", "cicids2017"
+        }
+        model = (self.model.get("flow_model") if is_flow_dataset else self.model) or None
+        if model is None:
+            return {
+                "enabled": False,
+                "status": "flow_model_not_found" if is_flow_dataset else "model_not_found",
                 "attack_type": None,
                 "confidence": 0.0,
             }
@@ -121,14 +145,14 @@ class MLDetectionAgent:
                 "confidence": 0.0,
             }
 
-        labels: list[str] = self.model.get("labels", [])
-        vocabulary = set(self.model.get("vocabulary", []))
+        labels: list[str] = model.get("labels", [])
+        vocabulary = set(model.get("vocabulary", []))
         vocab_size = max(1, len(vocabulary))
-        alpha = float(self.model.get("alpha", 1.0))
-        total_docs = max(1, int(self.model.get("total_docs", 1)))
-        class_docs: dict[str, int] = self.model.get("class_doc_counts", {})
-        class_totals: dict[str, int] = self.model.get("class_total_tokens", {})
-        class_tokens: dict[str, dict[str, int]] = self.model.get("class_token_counts", {})
+        alpha = float(model.get("alpha", 1.0))
+        total_docs = max(1, int(model.get("total_docs", 1)))
+        class_docs: dict[str, int] = model.get("class_doc_counts", {})
+        class_totals: dict[str, int] = model.get("class_total_tokens", {})
+        class_tokens: dict[str, dict[str, int]] = model.get("class_token_counts", {})
 
         scores: dict[str, float] = {}
         token_counts: dict[str, int] = {}
@@ -171,7 +195,7 @@ class MLDetectionAgent:
         }
         total_exp = sum(exp_scores.values()) or 1.0
         confidence = exp_scores[best_label] / total_exp
-        metadata = (self.model.get("label_metadata") or {}).get(best_label, {})
+        metadata = (model.get("label_metadata") or {}).get(best_label, {})
         top_labels = sorted(
             (
                 {
@@ -189,10 +213,9 @@ class MLDetectionAgent:
             "status": "ok",
             "attack_type": best_label,
             "confidence": round(confidence, 3),
-            "severity": metadata.get("severity", "low"),
             "mitre": metadata.get("mitre", []),
             "recommended_title": metadata.get("title"),
             "recommended_description": metadata.get("description"),
-            "model_version": self.model.get("version"),
+            "model_version": model.get("version"),
             "top_labels": top_labels,
         }

@@ -18,10 +18,10 @@ def test_ml_agent_detects_opnsense_http_flood():
 
     assert prediction["enabled"] is True
     assert prediction["attack_type"] == "http_flood_dos"
-    assert prediction["severity"] == "high"
+    assert "severity" not in prediction
 
 
-def test_ml_prediction_is_used_by_triage_for_sqlmap():
+def test_ml_prediction_enriches_but_does_not_set_sqlmap_severity():
     agent = MLDetectionAgent(Path("models/attack_classifier.json"))
     event = normalize_event(
         {
@@ -33,17 +33,19 @@ def test_ml_prediction_is_used_by_triage_for_sqlmap():
         },
         source_hint="apache",
     )
-    event["ml_prediction"] = agent.detect(event)
+    prediction = agent.detect(event)
+    prediction["confidence"] = 0.99
+    event["ml_prediction"] = prediction
 
     triage = triage_event(event)
 
     assert event["ml_prediction"]["attack_type"] == "sql_injection_probe"
-    assert triage["severity"] == "high"
+    assert triage["severity"] == "low"
     assert any(item["id"] == "T1190" for item in triage["mitre"])
     assert any("ML Detection Agent predicted" in reason for reason in triage["reasons"])
 
 
-def test_high_confidence_opnsense_network_scan_ml_escalates_to_high():
+def test_high_confidence_opnsense_network_scan_ml_does_not_escalate_severity():
     event = normalize_event(
         "<134>Jul 30 08:49:24 filterlog: "
         "69,,,0,em1,match,block,in,4,0x0,,64,12345,0,DF,6,tcp,60,"
@@ -64,8 +66,9 @@ def test_high_confidence_opnsense_network_scan_ml_escalates_to_high():
 
     triage = triage_event(event, event_count=3)
 
-    assert triage["severity"] == "high"
-    assert "network scan" in triage["title"].lower()
+    assert triage["severity"] == "low"
+    assert "network scan" not in triage["title"].lower()
+    assert any(item["id"] == "T1046" for item in triage["mitre"])
 
 
 def test_ml_feature_builder_does_not_inject_flood_tokens_for_outbound_traffic():

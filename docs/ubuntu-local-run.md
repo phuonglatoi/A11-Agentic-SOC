@@ -153,10 +153,12 @@ models/attack_classifier.json
 ```
 
 It is trained from `datasets/a11_seed_labeled_events.jsonl` so the lab can run
-immediately after cloning. The recommended latest external benchmark for this
-project is **DataSense: CIC IIoT dataset 2025**, because it contains classes
-that match the thesis lab: HTTP Flood/DoS/DDoS, Recon/Port Scan, Web SQLi/XSS,
-SSH/Telnet brute force, MITM/spoofing and Mirai-like malware.
+immediately after cloning. CICIDS2017 is an optional, older benchmark, not a
+recent production dataset. Its CICFlowMeter adapter is intended for flow-feature
+classification; it does not claim generalization to raw Apache, Windows or
+OPNsense logs. Numeric flow values are bucketed and flow IDs, IPs, timestamps,
+and labels are excluded from model features. Replayed original rows remain raw
+evidence.
 
 Retrain the built-in seed model:
 
@@ -166,22 +168,75 @@ python3 scripts/train_attack_classifier.py \
   --output models/attack_classifier.json
 ```
 
-Retrain with DataSense/CIC CSV after downloading it from the official source:
+Train with the local Windows-host dataset directory (run this on Windows), or
+mount that directory into Ubuntu and substitute the Linux mount path. The CSV
+reader streams rows and keeps a bounded reservoir (250 rows per class per CSV
+in this example). Use matching deterministic row split settings for train and
+benchmark; identical raw rows are assigned to the same split:
 
-```bash
-python3 scripts/train_attack_classifier.py \
-  --input datasets/a11_seed_labeled_events.jsonl \
-  --csv /path/to/DataSense_or_CIC_dataset.csv \
-  --sample-per-class 5000 \
+```powershell
+python scripts/train_attack_classifier.py `
+  --input datasets/a11_seed_labeled_events.jsonl `
+  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
+  --sample-per-class 250 `
+  --split train --holdout-percent 20 `
   --output models/attack_classifier.json
 ```
 
-Then rebuild the API:
+The benchmark takes a bounded stratified sample without replacement. Review
+macro metrics and per-class support; this sample is for lab comparison and is
+not a production SLA.
+
+```powershell
+python scripts/benchmark_attack_classifier.py `
+  --csv-dir "C:\Users\Admin\Documents\MachineLearningCVE" `
+  --split test --holdout-percent 20 `
+  --max-per-class 250 --sample-size 1000 `
+  --output work/cicids2017_holdout.json
+```
+
+The replay adapter strips the target label before ingestion. To send a small
+DoS-labeled sample into the local lab collector, set `SOC_API_KEY` and run:
+
+```powershell
+$env:SOC_API_KEY = "<your-ingest-key>"
+python scripts/replay_cicids_flows.py `
+  "C:\Users\Admin\Documents\MachineLearningCVE\Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv" `
+  --label http_flood_dos --rows 120 --interval-ms 100
+```
+
+A flow prediction alone does not raise severity. A deterministic rule requires
+100 correlated web-service flows on one fingerprint before an incident and
+notification action can be proposed; ensure `NOTIFICATION_WEBHOOK_URL` points
+to the active production n8n alert webhook. If source/destination/port vary, the
+events remain separate and the volume threshold may not be reached.
+
+After pulling this update, the trained model is already in the repository, so
+you do not need to install ML packages or train again just to run the SOC:
 
 ```bash
-docker compose build api
+git pull --ff-only
+docker compose up -d --build api
 docker compose --profile automation up -d
 ```
+
+To replay from the Windows host where the CSV folder exists, set the same
+ingestion key as the A11 `.env` and point at the Ubuntu VM API address (adjust
+the address if your VMware network uses another one):
+
+```powershell
+$env:SOC_API_KEY = "<same-value-as-SOC_API_KEY-in-.env>"
+python scripts/replay_cicids_flows.py `
+  "C:\Users\Admin\Documents\MachineLearningCVE\Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv" `
+  --url http://192.168.1.10:8000/api/v1/ingest `
+  --label http_flood_dos --rows 120 --interval-ms 100
+```
+
+This requires the Windows host to reach port 8000 on Ubuntu and the ingestion
+key to match. If replaying inside Ubuntu instead, mount/copy the external dataset
+there and use the default `127.0.0.1` URL. A11 still creates a high/critical
+incident/email only when deterministic triage criteria are met; model prediction
+alone does not promote severity.
 
 Check that the model is loaded:
 

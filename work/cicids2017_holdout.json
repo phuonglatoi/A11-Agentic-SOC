@@ -1,0 +1,1075 @@
+{
+  "summary": {
+    "samples": 1000,
+    "correct": 861,
+    "accuracy": 0.861,
+    "macro_precision": 0.8592,
+    "macro_recall": 0.8313,
+    "macro_f1": 0.8358,
+    "average_confidence": 0.9996
+  },
+  "per_class": {
+    "benign": {
+      "precision": 0.9517,
+      "recall": 0.8118,
+      "f1": 0.8762,
+      "support": 170
+    },
+    "botnet_activity": {
+      "precision": 0.9713,
+      "recall": 1.0,
+      "f1": 0.9854,
+      "support": 169
+    },
+    "brute_force": {
+      "precision": 0.6923,
+      "recall": 0.5858,
+      "f1": 0.6346,
+      "support": 169
+    },
+    "http_flood_dos": {
+      "precision": 0.961,
+      "recall": 0.8757,
+      "f1": 0.9164,
+      "support": 169
+    },
+    "infiltration": {
+      "precision": 0.6667,
+      "recall": 0.8,
+      "f1": 0.7273,
+      "support": 5
+    },
+    "network_scan": {
+      "precision": 0.9882,
+      "recall": 0.9941,
+      "f1": 0.9912,
+      "support": 169
+    },
+    "sql_injection_probe": {
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8,
+      "support": 6
+    },
+    "web_attack": {
+      "precision": 0.6422,
+      "recall": 0.9161,
+      "f1": 0.755,
+      "support": 143
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "benign",
+      "botnet_activity",
+      "brute_force",
+      "http_flood_dos",
+      "infiltration",
+      "network_scan",
+      "sql_injection_probe",
+      "web_attack"
+    ],
+    "rows_are_expected_columns_are_predicted": [
+      [
+        138,
+        4,
+        18,
+        3,
+        2,
+        2,
+        0,
+        3
+      ],
+      [
+        0,
+        169,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        2,
+        0,
+        99,
+        0,
+        0,
+        0,
+        0,
+        68
+      ],
+      [
+        3,
+        0,
+        17,
+        148,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        168,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        4,
+        0
+      ],
+      [
+        2,
+        0,
+        7,
+        3,
+        0,
+        0,
+        0,
+        131
+      ]
+    ]
+  },
+  "binary_detection": {
+    "positive_class": "attack (every label except benign)",
+    "negative_class": "benign",
+    "confusion": {
+      "tp": 823,
+      "fn": 7,
+      "fp": 32,
+      "tn": 138
+    },
+    "support": {
+      "positive_samples": 830,
+      "negative_samples": 170
+    },
+    "tpr": 0.9916,
+    "recall": 0.9916,
+    "sensitivity": 0.9916,
+    "fpr": 0.1882,
+    "tnr": 0.8118,
+    "specificity": 0.8118,
+    "fnr": 0.0084,
+    "precision": 0.9626
+  },
+  "failures": [
+    {
+      "row": 10,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 12,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 17,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 0.912
+    },
+    {
+      "row": 23,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 29,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 44,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 57,
+      "expected": "web_attack",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 58,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 62,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 64,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 85,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 87,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 98,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 109,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 112,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 0.998
+    },
+    {
+      "row": 119,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 124,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 133,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 156,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 163,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 166,
+      "expected": "web_attack",
+      "predicted": "http_flood_dos",
+      "confidence": 1.0
+    },
+    {
+      "row": 167,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 171,
+      "expected": "benign",
+      "predicted": "botnet_activity",
+      "confidence": 1.0
+    },
+    {
+      "row": 173,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 174,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 221,
+      "expected": "benign",
+      "predicted": "http_flood_dos",
+      "confidence": 1.0
+    },
+    {
+      "row": 225,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 226,
+      "expected": "benign",
+      "predicted": "botnet_activity",
+      "confidence": 1.0
+    },
+    {
+      "row": 237,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 238,
+      "expected": "benign",
+      "predicted": "botnet_activity",
+      "confidence": 1.0
+    },
+    {
+      "row": 243,
+      "expected": "brute_force",
+      "predicted": "benign",
+      "confidence": 1.0
+    },
+    {
+      "row": 251,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 253,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 259,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 268,
+      "expected": "web_attack",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 269,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 282,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 288,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 289,
+      "expected": "web_attack",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 305,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 310,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 312,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 317,
+      "expected": "sql_injection_probe",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 322,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 323,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 325,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 339,
+      "expected": "benign",
+      "predicted": "infiltration",
+      "confidence": 0.922
+    },
+    {
+      "row": 340,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 346,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 374,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 379,
+      "expected": "benign",
+      "predicted": "botnet_activity",
+      "confidence": 1.0
+    },
+    {
+      "row": 384,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 388,
+      "expected": "benign",
+      "predicted": "network_scan",
+      "confidence": 1.0
+    },
+    {
+      "row": 389,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 394,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 405,
+      "expected": "benign",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 413,
+      "expected": "http_flood_dos",
+      "predicted": "benign",
+      "confidence": 1.0
+    },
+    {
+      "row": 418,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 436,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 448,
+      "expected": "benign",
+      "predicted": "http_flood_dos",
+      "confidence": 1.0
+    },
+    {
+      "row": 449,
+      "expected": "sql_injection_probe",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 463,
+      "expected": "web_attack",
+      "predicted": "http_flood_dos",
+      "confidence": 0.846
+    },
+    {
+      "row": 466,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 480,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 508,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 510,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 527,
+      "expected": "infiltration",
+      "predicted": "botnet_activity",
+      "confidence": 1.0
+    },
+    {
+      "row": 531,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 533,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 546,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 547,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 548,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 552,
+      "expected": "web_attack",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 556,
+      "expected": "benign",
+      "predicted": "web_attack",
+      "confidence": 0.978
+    },
+    {
+      "row": 590,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 594,
+      "expected": "benign",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 596,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 597,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 634,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 637,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 643,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 650,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 653,
+      "expected": "http_flood_dos",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 667,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 668,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 685,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 689,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 690,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 707,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 715,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 716,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 724,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 728,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 732,
+      "expected": "network_scan",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 734,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 738,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 743,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 755,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 760,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 764,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 0.912
+    },
+    {
+      "row": 765,
+      "expected": "web_attack",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 775,
+      "expected": "http_flood_dos",
+      "predicted": "benign",
+      "confidence": 1.0
+    },
+    {
+      "row": 776,
+      "expected": "benign",
+      "predicted": "infiltration",
+      "confidence": 0.999
+    },
+    {
+      "row": 778,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 787,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 788,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 790,
+      "expected": "web_attack",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 791,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 793,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 798,
+      "expected": "web_attack",
+      "predicted": "http_flood_dos",
+      "confidence": 1.0
+    },
+    {
+      "row": 806,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 810,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 813,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 833,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 834,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 841,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 844,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 845,
+      "expected": "web_attack",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 847,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 848,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 862,
+      "expected": "benign",
+      "predicted": "network_scan",
+      "confidence": 1.0
+    },
+    {
+      "row": 865,
+      "expected": "brute_force",
+      "predicted": "benign",
+      "confidence": 1.0
+    },
+    {
+      "row": 881,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 889,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 898,
+      "expected": "web_attack",
+      "predicted": "benign",
+      "confidence": 1.0
+    },
+    {
+      "row": 899,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 925,
+      "expected": "benign",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 927,
+      "expected": "web_attack",
+      "predicted": "benign",
+      "confidence": 0.999
+    },
+    {
+      "row": 929,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 933,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 934,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 942,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 944,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 963,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 967,
+      "expected": "benign",
+      "predicted": "http_flood_dos",
+      "confidence": 0.999
+    },
+    {
+      "row": 981,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    },
+    {
+      "row": 983,
+      "expected": "http_flood_dos",
+      "predicted": "brute_force",
+      "confidence": 1.0
+    },
+    {
+      "row": 984,
+      "expected": "http_flood_dos",
+      "predicted": "benign",
+      "confidence": 1.0
+    },
+    {
+      "row": 993,
+      "expected": "brute_force",
+      "predicted": "web_attack",
+      "confidence": 1.0
+    }
+  ],
+  "generated_at": "2026-10-02T11:16:31.386557+00:00",
+  "model": {
+    "enabled": true,
+    "status": "ok",
+    "path": "models\\attack_classifier.json",
+    "version": "a11-nb-20261002110119",
+    "labels": [
+      "benign",
+      "botnet_activity",
+      "brute_force",
+      "http_flood_dos",
+      "infiltration",
+      "mirai_malware",
+      "mitm_spoofing",
+      "network_scan",
+      "powershell_execution",
+      "sql_injection_probe",
+      "web_attack",
+      "web_sensitive_path",
+      "windows_log_cleared"
+    ],
+    "total_docs": 3574,
+    "domains": [
+      "seed_events",
+      "cicids_flow"
+    ]
+  },
+  "datasets": [
+    "C:\\Users\\Admin\\Documents\\MachineLearningCVE"
+  ],
+  "sampling": {
+    "method": "stratified_without_replacement",
+    "requested_samples": 1000,
+    "available_samples": 3404,
+    "selected_samples": 1000,
+    "seed": 11,
+    "available_by_label": {
+      "benign": 1750,
+      "botnet_activity": 250,
+      "brute_force": 500,
+      "http_flood_dos": 500,
+      "infiltration": 5,
+      "network_scan": 250,
+      "sql_injection_probe": 6,
+      "web_attack": 143
+    },
+    "selected_by_label": {
+      "benign": 170,
+      "botnet_activity": 169,
+      "brute_force": 169,
+      "http_flood_dos": 169,
+      "infiltration": 5,
+      "network_scan": 169,
+      "sql_injection_probe": 6,
+      "web_attack": 143
+    }
+  },
+  "partition": {
+    "method": "blake2s_exact_raw_row_mod_100",
+    "split": "test",
+    "holdout_percent": 20
+  }
+}
