@@ -113,6 +113,17 @@ def test_end_to_end_ingest_incident_approval_and_audit(tmp_path: Path):
         assert decision.json()["status"] == "executed"
         assert decision.json()["result"]["mode"] == "dry_run"
 
+        duplicate_patch = client.patch(
+            f"/api/v1/actions/{block['id']}/decision",
+            headers=_headers(),
+            json={
+                "decision": "approve",
+                "analyst": "Test Analyst",
+                "reason": "Duplicate check via PATCH.",
+            },
+        )
+        assert duplicate_patch.status_code == 409
+
         audit = client.get("/api/v1/audit", headers=_headers()).json()
         assert any(item["action"] == "response.approved" for item in audit)
 

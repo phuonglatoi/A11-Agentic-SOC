@@ -13,7 +13,10 @@ def main() -> None:
     parser.add_argument("--sheet_pages", type=int, default=5)
     args = parser.parse_args()
 
-    sys.path.insert(0, str(Path("work/pydeps").resolve()))
+    sys.path.insert(0, str(Path("work/render_deps4").resolve()))
+    # This workspace bundles PyMuPDF under the compatible ``fitz`` name.
+    # The canonical ``pymupdf`` package directory may be unreadable in the
+    # restricted execution profile, so prefer the verified local wrapper.
     import fitz  # type: ignore
     from PIL import Image, ImageDraw, ImageFont
 

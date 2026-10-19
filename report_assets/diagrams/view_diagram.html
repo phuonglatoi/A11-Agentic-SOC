@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sơ đồ tổng quan A11 Agentic SOC</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; }
+#toolbar { position: fixed; top: 0; left: 0; right: 0; background: #16213e; padding: 10px 20px; display: flex; align-items: center; gap: 15px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+#toolbar h1 { font-size: 18px; color: #e94560; }
+#toolbar button { background: #0f3460; color: #fff; border: 1px solid #e94560; padding: 8px 16px; cursor: pointer; border-radius: 6px; font-size: 14px; transition: all 0.2s; }
+#toolbar button:hover { background: #e94560; }
+#toolbar span { font-size: 14px; color: #a8a8a8; }
+#container { margin-top: 60px; width: 100vw; height: calc(100vh - 60px); overflow: auto; display: flex; justify-content: center; align-items: flex-start; cursor: grab; }
+#container:active { cursor: grabbing; }
+#img { max-width: none; transition: transform 0.1s ease; user-select: none; -webkit-user-drag: none; }
+#info { position: fixed; bottom: 10px; right: 10px; background: rgba(15,52,96,0.9); padding: 8px 14px; border-radius: 6px; font-size: 13px; color: #a8a8a8; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+<h1>📊 Sơ đồ tổng quan A11 Agentic SOC</h1>
+<button onclick="zoomIn()">➕ Zoom In</button>
+<button onclick="zoomOut()">➖ Zoom Out</button>
+<button onclick="resetZoom()">🔄 Reset</button>
+<button onclick="fitWidth()">📐 Fit Width</button>
+<span id="zoomLevel">100%</span>
+</div>
+<div id="container" onwheel="onWheel(event)">
+<img id="img" src="so_do_tong_quan_day_du.png" alt="Sơ đồ tổng quan A11 Agentic SOC" />
+</div>
+<div id="info">Kéo để di chuyển • Lăn chuột để zoom • 2400×3200px</div>
+
+<script>
+let scale = 1;
+let isDragging = false;
+let startX, startY, scrollLeft, scrollTop;
+const img = document.getElementById('img');
+const container = document.getElementById('container');
+const zoomLabel = document.getElementById('zoomLevel');
+
+function updateZoom() {
+img.style.transform = `scale(${scale})`;
+zoomLabel.textContent = Math.round(scale * 100) + '%';
+}
+
+function zoomIn() { scale = Math.min(scale * 1.25, 5); updateZoom(); }
+function zoomOut() { scale = Math.max(scale / 1.25, 0.1); updateZoom(); }
+function resetZoom() { scale = 1; updateZoom(); container.scrollLeft = 0; container.scrollTop = 0; }
+function fitWidth() { scale = container.offsetWidth / 2400; updateZoom(); }
+
+function onWheel(e) {
+e.preventDefault();
+if (e.deltaY < 0) { zoomIn(); } else { zoomOut(); }
+}
+
+container.addEventListener('mousedown', (e) => {
+isDragging = true;
+startX = e.pageX - container.offsetLeft;
+startY = e.pageY - container.offsetTop;
+scrollLeft = container.scrollLeft;
+scrollTop = container.scrollTop;
+});
+
+container.addEventListener('mouseleave', () => { isDragging = false; });
+container.addEventListener('mouseup', () => { isDragging = false; });
+
+container.addEventListener('mousemove', (e) => {
+if (!isDragging) return;
+e.preventDefault();
+const x = e.pageX - container.offsetLeft;
+const y = e.pageY - container.offsetTop;
+container.scrollLeft = scrollLeft - (x - startX);
+container.scrollTop = scrollTop - (y - startY);
+});
+
+// Fit width on load
+window.addEventListener('load', () => { fitWidth(); });
+</script>
+</body>
+</html>

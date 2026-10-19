@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1600" viewBox="0 0 2400 1600" role="img" aria-labelledby="title desc">
+  <title id="title">A11 Agentic SOC — tiến trình hệ thống và mức độ hoàn thiện</title>
+  <desc id="desc">Sơ đồ phân vùng mạng lab, đường đi log đến SOC A11, xử lý ML và RAG, dashboard, n8n, approval gate, cùng các mục đã hoàn thành, cần xác minh và điểm nghẽn Ollama.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102a43"/>
+      <stop offset="1" stop-color="#1b4260"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#66829a"/>
+    </marker>
+    <marker id="arrow-cyan" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#1597a8"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; fill: #183247; }
+      .muted { fill: #60788c; }
+      .white { fill: #ffffff; }
+      .eyebrow { font-size: 18px; font-weight: 700; letter-spacing: 1.8px; }
+      .section { font-size: 27px; font-weight: 700; letter-spacing: .4px; }
+      .h1 { font-size: 46px; font-weight: 700; letter-spacing: -.5px; }
+      .h2 { font-size: 27px; font-weight: 700; }
+      .body { font-size: 22px; font-weight: 600; }
+      .small { font-size: 19px; font-weight: 600; }
+      .tiny { font-size: 17px; font-weight: 600; }
+      .mono { font-family: "Cascadia Code", Consolas, monospace; font-size: 18px; font-weight: 600; }
+      .panel { fill: #ffffff; stroke: #b9c9d5; stroke-width: 3; }
+      .node { fill: #ffffff; stroke: #b9c9d5; stroke-width: 3; }
+      .soft-blue { fill: #edf5fb; }
+      .soft-teal { fill: #e9f7f6; }
+      .soft-neutral { fill: #eef3f7; stroke: #c5d1da; stroke-width: 3; }
+      .line { fill: none; stroke: #536e83; stroke-width: 4; marker-end: url(#arrow); }
+      .line-teal { fill: none; stroke: #087f91; stroke-width: 4; marker-end: url(#arrow-cyan); }
+      .rule { stroke: #c6d2db; stroke-width: 3; }
+      .bullet { fill: #1597a8; }
+    </style>
+  </defs>
+
+  <rect width="2400" height="1600" fill="#f4f7fa"/>
+  <rect x="0" y="0" width="2400" height="205" fill="url(#header)"/>
+  <text x="78" y="55" class="eyebrow" fill="#7de0e3">A11 AGENTIC SOC  /  SYSTEM FLOW</text>
+  <text x="78" y="112" class="h1 white">Toàn bộ tiến trình &amp; mức độ hoàn thiện</text>
+  <text x="80" y="158" class="body" fill="#d6e4ee">Mạng lab → log → phân tích → cảnh báo → phản ứng có duyệt</text>
+  <g transform="translate(1650 67)">
+    <circle cx="0" cy="0" r="10" fill="#7de0e3"/><text x="22" y="7" class="small white">Hoàn thành</text>
+    <circle cx="205" cy="0" r="10" fill="#b9c9d5"/><text x="227" y="7" class="small white">Chưa hoàn thành</text>
+  </g>
+  <text x="1650" y="132" class="tiny" fill="#c1d1dd">Code đã có ≠ mọi nguồn log đã kết nối</text>
+
+  <!-- Main architecture columns -->
+  <rect x="65" y="235" width="560" height="880" rx="24" class="panel"/>
+  <rect x="650" y="235" width="1120" height="880" rx="24" class="panel"/>
+  <rect x="1795" y="235" width="540" height="880" rx="24" class="panel"/>
+
+  <!-- Column 1: lab network and log sources -->
+  <text x="98" y="283" class="eyebrow" fill="#167c91">01  /  MẠNG LAB &amp; NGUỒN LOG</text>
+
+  <rect x="95" y="345" width="500" height="116" rx="16" class="soft-blue" stroke="#cfe0ed" stroke-width="2"/>
+  <text x="120" y="379" class="eyebrow" fill="#3c6f91">WAN · 192.168.228.0/24</text>
+  <text x="120" y="416" class="h2">Kali Linux</text>
+  <text x="120" y="444" class="mono muted">Kali · 192.168.228.128</text>
+
+  <path d="M345 462 L345 488" class="line"/>
+  <rect x="95" y="492" width="500" height="133" rx="16" class="node"/>
+  <rect x="95" y="492" width="9" height="133" rx="4" fill="#3a7797"/>
+  <text x="125" y="527" class="h2">OPNsense Firewall</text>
+  <text x="125" y="558" class="small">WAN .142 → LAN .1 · NAT + firewall</text>
+  <text x="125" y="590" class="small muted">HTTP :80 → Ubuntu .10:80 · source Kali /32</text>
+  <text x="125" y="615" class="tiny muted">Bật logging trên rule WAN</text>
+
+  <path d="M345 626 L345 651" class="line"/>
+  <rect x="95" y="655" width="500" height="114" rx="16" class="soft-teal" stroke="#c4e5e3" stroke-width="2"/>
+  <text x="120" y="692" class="eyebrow" fill="#167c91">LAN · 192.168.1.0/24</text>
+  <text x="120" y="730" class="h2">Ubuntu A11 SOC · .10</text>
+  <text x="120" y="757" class="small muted">Docker · API · PostgreSQL · Dashboard</text>
+
+  <line x1="95" y1="794" x2="595" y2="794" class="rule"/>
+  <text x="105" y="828" class="eyebrow" fill="#167c91">ĐƯỜNG LOG VÀO SOC</text>
+  <circle cx="112" cy="858" r="5" class="bullet"/><text x="130" y="865" class="small">OPNsense → Syslog UDP :5514 / :514</text>
+  <circle cx="112" cy="908" r="5" class="bullet"/><text x="130" y="915" class="small">Ubuntu auth → rsyslog UDP :5514</text>
+  <circle cx="112" cy="950" r="5" class="bullet"/><text x="130" y="957" class="small">Apache · Suricata · Windows → REST/HEC :8000</text>
+  <circle cx="112" cy="992" r="5" class="bullet"/><text x="130" y="999" class="small">Splunk poller · tùy chọn</text>
+
+  <!-- Network to collector path -->
+  <path d="M595 858 C625 858 625 408 677 408" class="line-teal"/>
+  <text x="602" y="628" class="tiny" fill="#167c91" transform="rotate(-90 602 628)">SYSLOG / REST / HEC</text>
+
+  <!-- Column 2: A11 processing pipeline -->
+  <text x="685" y="283" class="eyebrow" fill="#167c91">02  /  A11 SOC · TIẾP NHẬN → PHÂN TÍCH</text>
+
+  <rect x="685" y="345" width="1050" height="112" rx="16" class="soft-blue" stroke="#cfe0ed" stroke-width="2"/>
+  <text x="715" y="380" class="eyebrow" fill="#3c6f91">A  /  INGEST GATEWAYS</text>
+  <text x="715" y="418" class="h2">Syslog UDP 5514 / 514</text>
+  <text x="1110" y="418" class="h2">REST + HEC-compatible TCP 8000</text>
+  <path d="M1200 458 L1200 478" class="line"/>
+
+  <rect x="685" y="482" width="1050" height="105" rx="16" class="node"/>
+  <text x="715" y="517" class="eyebrow" fill="#167c91">B  /  QUEUE → NORMALIZE → POSTGRESQL</text>
+  <text x="715" y="554" class="body">Common schema + fingerprint · lưu raw và normalized evidence</text>
+  <path d="M1200 588 L1200 608" class="line"/>
+
+  <text x="690" y="641" class="eyebrow" fill="#167c91">C  /  PHÂN TÍCH &amp; TƯƠNG QUAN</text>
+  <rect x="685" y="658" width="330" height="180" rx="16" class="soft-blue" stroke="#cfe0ed" stroke-width="2"/>
+  <text x="710" y="694" class="h2">ML Detection Agent</text>
+  <text x="710" y="728" class="small">Seed logs + CICIDS flow</text>
+  <text x="710" y="756" class="small">Dự đoán loại / confidence</text>
+  <text x="710" y="798" class="tiny muted">Flow model chỉ nhận flow features</text>
+
+  <rect x="1030" y="658" width="355" height="180" rx="16" class="soft-blue" stroke="#cfe0ed" stroke-width="2"/>
+  <text x="1055" y="694" class="h2">Triage + Correlation</text>
+  <text x="1055" y="728" class="small">Rules + event count → severity</text>
+  <text x="1055" y="756" class="small">MITRE + correlation thresholds</text>
+  <text x="1055" y="798" class="tiny muted">ML không tự quyết định / block</text>
+
+  <rect x="1400" y="658" width="335" height="180" rx="16" class="soft-teal" stroke="#c4e5e3" stroke-width="2"/>
+  <text x="1425" y="694" class="h2">Enrichment + RAG</text>
+  <text x="1425" y="728" class="small">Asset / IOC enrichment</text>
+  <text x="1425" y="756" class="small">Playbook nội bộ</text>
+  <text x="1425" y="798" class="tiny muted">Khuyến nghị, không tự thực thi</text>
+
+  <path d="M1200 839 L1200 858" class="line"/>
+  <rect x="685" y="862" width="1050" height="100" rx="16" class="node"/>
+  <text x="715" y="900" class="eyebrow" fill="#167c91">D  /  SOC OUTPUTS</text>
+  <text x="715" y="938" class="h2">Alert → Incident → Report → Response đề xuất</text>
+
+  <rect x="685" y="980" width="1050" height="109" rx="16" class="soft-neutral"/>
+  <text x="715" y="1016" class="eyebrow" fill="#395c75">CHƯA HOÀN THÀNH · OLLAMA</text>
+  <text x="715" y="1052" class="small">LLM đang chặn từng event trước DB/SSE · 1 Syslog worker</text>
+  <text x="715" y="1079" class="small muted">Health đã thấy: 366 nhận · 6 xử lý · 359 chờ</text>
+
+  <!-- Center outputs to consumers -->
+  <path d="M1737 905 C1771 905 1765 412 1818 412" class="line-teal"/>
+  <path d="M1737 914 C1780 914 1778 661 1818 661" class="line"/>
+
+  <!-- Column 3: users, n8n, approval -->
+  <text x="1830" y="283" class="eyebrow" fill="#167c91">03  /  PHÂN TÍCH &amp; PHẢN ỨNG</text>
+
+  <rect x="1830" y="345" width="470" height="205" rx="16" class="soft-blue" stroke="#cfe0ed" stroke-width="2"/>
+  <text x="1860" y="384" class="h2">Dashboard A11</text>
+  <text x="1860" y="420" class="small">Alerts · Raw events · Incidents</text>
+  <text x="1860" y="449" class="small">Response · Audit trail · SSE</text>
+  <text x="1860" y="495" class="tiny muted">Realtime chờ pipeline commit</text>
+
+  <rect x="1830" y="575" width="470" height="215" rx="16" class="soft-teal" stroke="#c4e5e3" stroke-width="2"/>
+  <text x="1860" y="614" class="h2">n8n SOAR + Mailpit</text>
+  <text x="1860" y="650" class="small">Webhook → phân loại → Mailpit email</text>
+  <text x="1860" y="679" class="small">Audit callback về A11</text>
+  <text x="1860" y="735" class="tiny muted">Cần Published + URL đúng</text>
+
+  <rect x="1830" y="815" width="470" height="274" rx="16" class="soft-blue" stroke="#cfe0ed" stroke-width="2"/>
+  <text x="1860" y="854" class="h2">Human Approval Gate</text>
+  <text x="1860" y="890" class="small">Analyst duyệt / từ chối</text>
+  <line x1="1860" y1="910" x2="2270" y2="910" class="rule"/>
+  <text x="1860" y="947" class="eyebrow" fill="#167c91">SAU KHI DUYỆT</text>
+  <text x="1860" y="979" class="small">Dry-run · webhook · OPNsense</text>
+  <text x="1860" y="1016" class="small">Ghi Audit Trail</text>
+
+  <!-- Status cards -->
+  <text x="72" y="1165" class="eyebrow" fill="#526d82">TRẠNG THÁI TRIỂN KHAI</text>
+  <rect x="65" y="1190" width="1100" height="325" rx="20" class="panel"/>
+  <rect x="65" y="1190" width="1100" height="10" rx="5" fill="#167c91"/>
+  <circle cx="100" cy="1238" r="10" fill="#167c91"/>
+  <text x="125" y="1246" class="section">HOÀN THÀNH</text>
+  <text x="100" y="1295" class="small">• Syslog + REST/HEC collectors; normalize + PostgreSQL evidence</text>
+  <text x="100" y="1337" class="small">• ML, rules, correlation, MITRE, enrichment và RAG</text>
+  <text x="100" y="1379" class="small">• Alert, incident, report, dashboard SSE và audit</text>
+  <text x="100" y="1421" class="small">• Human approval; n8n / Mailpit / OPNsense adapters trong repo</text>
+  <text x="100" y="1463" class="small">• Lab đã quan sát được log, alert và kiểm thử webhook</text>
+
+  <rect x="1200" y="1190" width="1135" height="325" rx="20" class="panel"/>
+  <rect x="1200" y="1190" width="1135" height="10" rx="5" fill="#536e83"/>
+  <circle cx="1235" cy="1238" r="10" fill="#536e83"/>
+  <text x="1260" y="1246" class="section">CHƯA HOÀN THÀNH</text>
+  <text x="1235" y="1295" class="small">• Tách Ollama khỏi ingest; không gọi LLM cho mỗi raw event</text>
+  <text x="1235" y="1337" class="small">• Xác minh forwarder từng nguồn + n8n/email/audit end-to-end</text>
+  <text x="1235" y="1379" class="small">• Đánh giá CICIDS2017 cũ trên lab mới; FPR baseline 18.82%</text>
+  <text x="1235" y="1421" class="small">• Load test, queue latency và xử lý backlog</text>
+  <text x="1235" y="1463" class="small">• Giữ dry-run; chỉ bật response firewall sau kiểm thử</text>
+
+  <text x="72" y="1560" class="tiny muted">Tóm tắt từ code repo và bằng chứng lab đã chia sẻ · Có collector không đồng nghĩa mọi sensor đã kết nối.</text>
+</svg>

@@ -406,6 +406,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response_model=ActionOut,
         dependencies=[Depends(require_admin)],
     )
+    @app.patch(
+        "/api/v1/actions/{action_id}/decision",
+        response_model=ActionOut,
+        dependencies=[Depends(require_admin)],
+    )
     async def decide_action(
         action_id: str,
         payload: DecisionRequest,
