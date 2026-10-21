@@ -34,3 +34,4 @@ docs/*TIEN_DO*.md
 *.docx
 *.pptx
 *.xlsx
+scripts/evaluate_15_kali_attacks.py

@@ -6,7 +6,7 @@
   <meta name="description" content="A11 Agentic SOC - local-first security operations dashboard">
   <title>A11 // Agentic SOC</title>
   <!-- Visual direction adapted from “SOC Dashboard (Cyber Security)” by Arun V S, CC BY 4.0: https://www.figma.com/community/file/1596233030947325421/soc-dashboard-cyber-security -->
-  <link rel="stylesheet" href="/styles.css?v=figma-soc-2">
+  <link rel="stylesheet" href="/styles.css?v=flow-soc-1">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -24,6 +24,10 @@
       <button class="nav-item active" data-view="overview">
         <span class="nav-icon">⌁</span><span>Overview</span>
       </button>
+      <button class="nav-item" data-view="pipeline">
+        <span class="nav-icon">⇄</span><span>Pipeline Flow</span>
+        <b id="navFlowStatus">LIVE</b>
+      </button>
       <button class="nav-item" data-view="alerts">
         <span class="nav-icon">◈</span><span>Alert queue</span>
         <b id="navAlertCount">0</b>
@@ -36,7 +40,7 @@
         <span class="nav-icon">◇</span><span>Incidents</span>
       </button>
       <button class="nav-item" data-view="response">
-        <span class="nav-icon">⌾</span><span>Response</span>
+        <span class="nav-icon">⌾</span><span>Response (HITL)</span>
         <b id="navActionCount">0</b>
       </button>
       <button class="nav-item" data-view="audit">
@@ -97,10 +101,10 @@
           </div>
         </article>
         <article class="panel network-card">
-          <div class="node attacker"><i></i><span>Kali</span><b>192.168.228.128</b></div>
-          <div class="node firewall"><i></i><span>OPNsense</span><b>WAN 192.168.228.142</b></div>
-          <div class="node soc"><i></i><span>A11 SOC</span><b>Ubuntu 192.168.1.10</b></div>
-          <div class="node auto"><i></i><span>n8n + Mailpit</span><b>Automation evidence</b></div>
+          <div class="node attacker"><i></i><span>Kali Linux (WAN)</span><b>192.168.108.128</b></div>
+          <div class="node firewall"><i></i><span>OPNsense (2-NIC)</span><b>WAN 192.168.108.133 · LAN 10.10.10.1</b></div>
+          <div class="node soc"><i></i><span>A11 SOC Target (LAN)</span><b>Ubuntu 10.10.10.10</b></div>
+          <div class="node auto"><i></i><span>SOAR n8n + Mailpit</span><b>:5678 Webhook · :8025 SMTP</b></div>
         </article>
       </div>
 
@@ -165,38 +169,69 @@
         </article>
       </div>
 
-      <article class="panel lab-flow">
+      <article class="panel flow-pipeline-card">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">LAB EVIDENCE FLOW</p>
-            <h2>Real-time SOC data path</h2>
+            <p class="eyebrow">SƠ ĐỒ LUỒNG ĐẦU CUỐI · 6 GIAI ĐOẠN XỬ LÝ TỰ CHỦ</p>
+            <h2>End-to-End SOC Data Pipeline Architecture</h2>
           </div>
-          <span class="report-chip">REPORT READY</span>
+          <div class="panel-head-actions">
+            <button class="button primary small" data-jump="pipeline">Khám phá Sơ đồ luồng toàn màn hình ↗</button>
+          </div>
         </div>
-        <div class="flow-lane" aria-label="Luồng dữ liệu SOC">
-          <div class="flow-card">
-            <i>01</i>
-            <span>Attack source</span>
-            <strong>Kali / Lab client</strong>
-            <small>192.168.228.128 → WAN target</small>
+        <div class="pipeline-steps-grid" aria-label="Luồng dữ liệu SOC 6 bước">
+          <!-- Step 1 -->
+          <div class="pipe-step" data-jump="events" title="Bấm để xem Raw Events">
+            <div class="step-num">01</div>
+            <div class="step-badge udp">UDP / REST</div>
+            <strong>Nạp Log Đa Nguồn</strong>
+            <p>OPNsense UDP :5514 + Apache Shipper POST :8000</p>
+            <div class="step-metric"><span id="pipeMetricEvents">0</span> events</div>
           </div>
-          <div class="flow-card">
-            <i>02</i>
-            <span>Firewall telemetry</span>
-            <strong>OPNsense filterlog</strong>
-            <small>Syslog UDP 514 / 5514</small>
+          <div class="pipe-arrow">➜</div>
+          <!-- Step 2 -->
+          <div class="pipe-step" data-jump="events" title="Bấm để xem Raw Events">
+            <div class="step-num">02</div>
+            <div class="step-badge parse">6 PARSERS</div>
+            <strong>Chuẩn Hóa & Bóc Tách</strong>
+            <p>_opnsense_filterlog 17 CSV & SUSPICIOUS_PATH</p>
+            <div class="step-metric"><span>Unified</span> Schema</div>
           </div>
-          <div class="flow-card accent">
-            <i>03</i>
-            <span>A11 processing</span>
-            <strong>Normalize → ML/RAG → Triage</strong>
-            <small>REST/HEC TCP 8000 + local pipeline</small>
+          <div class="pipe-arrow">➜</div>
+          <!-- Step 3 -->
+          <div class="pipe-step" data-jump="alerts" title="Bấm để xem Alert Queue">
+            <div class="step-num">03</div>
+            <div class="step-badge corr">SHA-256 · 300S</div>
+            <strong>Tương Quan Cửa Sổ</strong>
+            <p>Gom nhóm 300s, triệt tiêu 95% bão log trùng lặp</p>
+            <div class="step-metric"><span id="pipeMetricAlerts">0</span> alerts</div>
           </div>
-          <div class="flow-card">
-            <i>04</i>
-            <span>Automation</span>
-            <strong>n8n + Mailpit</strong>
-            <small>Webhook 5678 → Email 8025</small>
+          <div class="pipe-arrow">➜</div>
+          <!-- Step 4 -->
+          <div class="pipe-step" data-jump="incidents" title="Bấm để xem Incidents">
+            <div class="step-num">04</div>
+            <div class="step-badge ai">6 AGENTS AI</div>
+            <strong>ML + Triage + RAG</strong>
+            <p>Naive Bayes (0.515ms), MITRE Rules, Ollama Qwen</p>
+            <div class="step-metric"><span id="pipeMetricIncidents">0</span> incidents</div>
+          </div>
+          <div class="pipe-arrow">➜</div>
+          <!-- Step 5 -->
+          <div class="pipe-step" data-jump="response" title="Bấm để duyệt phản ứng HITL">
+            <div class="step-num">05</div>
+            <div class="step-badge hitl">HITL GATE</div>
+            <strong>Phê Duyệt An Toàn</strong>
+            <p>Rào chắn is_safe_block_target cấm tự khóa IP nội bộ</p>
+            <div class="step-metric"><span id="pipeMetricActions">0</span> pending</div>
+          </div>
+          <div class="pipe-arrow">➜</div>
+          <!-- Step 6 -->
+          <div class="pipe-step" data-jump="response" title="Bấm để xem SOAR Execution">
+            <div class="step-num">06</div>
+            <div class="step-badge soar">SOAR KÉP</div>
+            <strong>n8n + Khóa Biên</strong>
+            <p>Gửi thư Mailpit & nạp OPNsense SOC_BLOCKLIST</p>
+            <div class="step-metric"><span class="closed-loop-pill">Closed-loop</span> Drop</div>
           </div>
         </div>
       </article>
@@ -282,6 +317,235 @@
           <p>Run the lab scenario or send Apache, Suricata, Windows, HEC, or syslog events.</p>
         </div>
       </article>
+    </section>
+
+    <section class="view" id="view-pipeline">
+      <div class="pipeline-header-card panel">
+        <div class="pipeline-header-main">
+          <p class="eyebrow">KIẾN TRÚC & SƠ ĐỒ LUỒNG TOÀN CẢNH · 100% ON-PREMISE</p>
+          <h2>Sơ Đồ Luồng Hoạt Động Hệ Thống A11 Agentic SOC</h2>
+          <p class="pipeline-header-desc">
+            Quy trình khép kín từ lúc phát hiện gói tin thô tại biên mạng OPNsense và Apache Web, qua bộ lọc tương quan 300s,
+            chuỗi 6 tác nhân AI (ML Naive Bayes, Triage MITRE, RAG 10 Playbooks, Local LLM), đến chốt chặn an toàn HITL và tự động hóa SOAR.
+          </p>
+        </div>
+        <div class="pipeline-header-actions">
+          <button class="button primary" id="pipeRunDemoBtn">⌁ Chạy kịch bản Lab</button>
+          <a class="button secondary" href="http://10.10.10.10:8025" target="_blank" rel="noopener">✉ Mailpit (:8025)</a>
+          <a class="button secondary" href="http://10.10.10.10:5678" target="_blank" rel="noopener">⚙ n8n (:5678)</a>
+          <button class="button secondary" data-jump="response">⌾ Hàng đợi duyệt HITL</button>
+        </div>
+      </div>
+
+      <!-- Live metrics summary on top of pipeline -->
+      <div class="pipeline-metrics-bar">
+        <div class="pipe-stat-pill">
+          <span class="stat-dot green"></span>
+          <span>Thu nhận log:</span>
+          <strong id="pipeStatEvents">0</strong> sự kiện
+        </div>
+        <div class="pipe-stat-pill">
+          <span class="stat-dot amber"></span>
+          <span>Tương quan 300s:</span>
+          <strong id="pipeStatAlerts">0</strong> cảnh báo
+        </div>
+        <div class="pipe-stat-pill">
+          <span class="stat-dot cyan"></span>
+          <span>Suy luận ML Naive Bayes:</span>
+          <strong>0.515 ms</strong> (93.33% Acc)
+        </div>
+        <div class="pipe-stat-pill">
+          <span class="stat-dot red"></span>
+          <span>Sự cố nghiêm trọng:</span>
+          <strong id="pipeStatIncidents">0</strong> incidents
+        </div>
+        <div class="pipe-stat-pill">
+          <span class="stat-dot orange"></span>
+          <span>Chờ con người duyệt:</span>
+          <strong id="pipeStatActions">0</strong> actions
+        </div>
+        <div class="pipe-stat-pill">
+          <span class="stat-dot blue"></span>
+          <span>Tự động hóa SOAR:</span>
+          <strong>Active</strong> (n8n + Mailpit)
+        </div>
+      </div>
+
+      <!-- Master 5-Zone Flow Grid -->
+      <div class="master-flow-grid">
+        <!-- ZONE 1 -->
+        <article class="panel flow-zone-card zone-1">
+          <div class="zone-head">
+            <span class="zone-badge red">VÙNG MẠNG 1</span>
+            <h3>Hạ Tầng & Tấn Công</h3>
+            <p>WAN (Kali) ➜ OPNsense ➜ LAN (Ubuntu)</p>
+          </div>
+          <div class="zone-body">
+            <div class="flow-subnode attacker">
+              <div class="subnode-top">
+                <span class="subnode-tag red">KẺ TẤN CÔNG</span>
+                <strong>Kali Linux (192.168.108.128)</strong>
+              </div>
+              <p>Phát 15 kịch bản kiểm thử: Nmap SYN/UDP scan, Web OWASP SQLi/Traversal/.env/XSS, DoS Slowloris/Flood, Hydra SSH.</p>
+            </div>
+            <div class="flow-connector-down">▼ Gói tin chạm cổng biên WAN</div>
+            <div class="flow-subnode firewall">
+              <div class="subnode-top">
+                <span class="subnode-tag cyan">TƯỜNG LỬA BIÊN</span>
+                <strong>OPNsense (2-NIC)</strong>
+              </div>
+              <p>WAN 192.168.108.133 · LAN 10.10.10.1<br>PF Engine Default Deny · NAT Port 80 · Suricata IDS · Bảng động <code>SOC_BLOCKLIST</code>.</p>
+            </div>
+            <div class="flow-connector-down">▼ Chuyển tiếp cổng 80 vào LAN</div>
+            <div class="flow-subnode target">
+              <div class="subnode-top">
+                <span class="subnode-tag green">MỤC TIÊU & SOC</span>
+                <strong>Ubuntu SOC (10.10.10.10)</strong>
+              </div>
+              <p>Apache2 Web (:80) + Cụm 4 Docker container (soc-app, ollama, n8n, mailpit).</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ZONE 2 -->
+        <article class="panel flow-zone-card zone-2">
+          <div class="zone-head">
+            <span class="zone-badge cyan">LỚP 1 & 2</span>
+            <h3>Thu Thập & Chuẩn Hóa</h3>
+            <p>Cơ chế nạp kép: UDP :5514 vs REST API</p>
+          </div>
+          <div class="zone-body">
+            <div class="flow-subnode branch-udp" data-jump="events">
+              <div class="subnode-top">
+                <span class="subnode-tag cyan">NHÁNH 1 · UDP :5514</span>
+                <strong>OPNsense filterlog</strong>
+              </div>
+              <p>Datagram Socket UDP bất đồng bộ <code>SyslogProtocol</code> ➜ Hàm <code>_opnsense_filterlog()</code> tách 17 trường CSV (Bắt Nmap Port Scan & DoS L3/L4).</p>
+            </div>
+            <div class="flow-subnode branch-rest" data-jump="events">
+              <div class="subnode-top">
+                <span class="subnode-tag amber">NHÁNH 2 · REST API</span>
+                <strong>Apache Shipper</strong>
+              </div>
+              <p>Tail <code>/var/log/apache2/access.log</code> ➜ HTTP POST <code>:8000/api/v1/ingest</code> (X-API-Key) ➜ Hàm <code>_apache()</code> quét <code>SUSPICIOUS_PATH</code> (Bắt SQLi, XSS, .env L7).</p>
+            </div>
+            <div class="flow-connector-down">▼ Hội tụ lược đồ chung</div>
+            <div class="flow-subnode schema" data-jump="events">
+              <div class="subnode-top">
+                <span class="subnode-tag blue">UNIFIED SCHEMA</span>
+                <strong>NormalizedEvent</strong>
+              </div>
+              <p>id, timestamp, source, event_type, src_ip, dest_ip, dest_port, proto, action, message, raw_text.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ZONE 3 -->
+        <article class="panel flow-zone-card zone-3">
+          <div class="zone-head">
+            <span class="zone-badge amber">LỚP 3</span>
+            <h3>Tương Quan & Lọc Nhiễu</h3>
+            <p>Sliding Window 300s & Giảm Báo Động Giả</p>
+          </div>
+          <div class="zone-body">
+            <div class="flow-subnode fp" data-jump="alerts">
+              <div class="subnode-top">
+                <span class="subnode-tag amber">BĂM ĐỊNH DANH</span>
+                <strong>Fingerprint SHA-256</strong>
+              </div>
+              <p><code>fingerprint()</code> tại parsers.py:L406 băm 6 trường: src_ip + dst_ip + dst_port + proto + event_type + rule_id.</p>
+            </div>
+            <div class="flow-subnode window" data-jump="alerts">
+              <div class="subnode-top">
+                <span class="subnode-tag cyan">CỬA SỔ TRƯỢT 300S</span>
+                <strong>Sliding Window</strong>
+              </div>
+              <p>pipeline.py:L82-96: Nếu trùng fingerprint trong 300s ➜ cộng dồn <code>event_count += 1</code>. Nén >95% bão cảnh báo trùng lặp!</p>
+            </div>
+            <div class="flow-subnode enrich" data-jump="alerts">
+              <div class="subnode-top">
+                <span class="subnode-tag green">LÀM GIÀU & LỌC NHIỄU</span>
+                <strong>Enrichment & Anti-FP</strong>
+              </div>
+              <p>Tra cứu <code>assets.json</code> & <code>iocs.json</code>. Cờ <code>firewall_ml_eligible</code> tự động bỏ qua DNS (53), DHCP (67), NTP (123) nội bộ.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ZONE 4 -->
+        <article class="panel flow-zone-card zone-4">
+          <div class="zone-head">
+            <span class="zone-badge purple">LỚP 4 AI</span>
+            <h3>Trái Tim Đa Tác Nhân AI</h3>
+            <p>Học máy Naive Bayes, Triage, RAG & LLM</p>
+          </div>
+          <div class="zone-body">
+            <div class="flow-subnode ml" data-jump="incidents">
+              <div class="subnode-top">
+                <span class="subnode-tag cyan">AGENT 1 · HỌC MÁY</span>
+                <strong>Multinomial Naive Bayes</strong>
+              </div>
+              <p>0.515 ms/ev trên CPU (~1.942 eps) · Acc 93.33% · Trích xuất Bigram + nhãn tần suất <code>event_volume:high</code> (>= 50).</p>
+            </div>
+            <div class="flow-subnode triage" data-jump="incidents">
+              <div class="subnode-top">
+                <span class="subnode-tag red">AGENT 2 · TRIAGE</span>
+                <strong>5 Nhánh Luật Mức HIGH</strong>
+              </div>
+              <p>triage.py: L67 Web >= 5 (T1190), L201 DoS >= 50 (T1498), L241 Scan >= 20 (T1046), L365 Auth fail >= 10, L428 IOC.</p>
+            </div>
+            <div class="flow-subnode rag" data-jump="incidents">
+              <div class="subnode-top">
+                <span class="subnode-tag purple">AGENT 3 & 4 · RAG & LLM</span>
+                <strong>10 Playbooks + Qwen2.5</strong>
+              </div>
+              <p>rag.py tìm SOP không ảo giác (+0.03 title bonus). Ollama Qwen2.5 On-Premise kèm fallback dự phòng 1 ms.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ZONE 5 -->
+        <article class="panel flow-zone-card zone-5">
+          <div class="zone-head">
+            <span class="zone-badge orange">LỚP 5 & 6</span>
+            <h3>Chốt Chặn HITL & SOAR</h3>
+            <p>Phê duyệt con người, n8n, Mailpit & Khóa Biên</p>
+          </div>
+          <div class="zone-body">
+            <div class="flow-subnode hitl" data-jump="response">
+              <div class="subnode-top">
+                <span class="subnode-tag red">CHỐT CHẶN AN TOÀN</span>
+                <strong>Human-in-the-Loop</strong>
+              </div>
+              <p><code>is_safe_block_target()</code> cấm khóa IP riêng tư RFC1918 / Loopback. Bắt buộc Admin bấm "Approve" trên Web.</p>
+            </div>
+            <div class="flow-subnode soar-auto" data-jump="response">
+              <div class="subnode-top">
+                <span class="subnode-tag amber">SOAR NHÁNH 1 (TỰ ĐỘNG)</span>
+                <strong>n8n + Mailpit (:8025)</strong>
+              </div>
+              <p>Bắn Webhook sang n8n (:5678) ➜ Định dạng mẫu HTML ➜ Chuyển tiếp email cảnh báo về Mailpit.</p>
+            </div>
+            <div class="flow-subnode soar-block" data-jump="response">
+              <div class="subnode-top">
+                <span class="subnode-tag green">SOAR NHÁNH 2 (DUYỆT)</span>
+                <strong>Khóa IP OPNsense Biên</strong>
+              </div>
+              <p>Admin bấm Approve ➜ <code>ResponseExecutor</code> gọi REST API OPNsense ➜ Nạp IP vào bảng <code>SOC_BLOCKLIST</code> drop ngay tại WAN!</p>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Closed-Loop Feedback Strip -->
+      <div class="feedback-closed-loop panel">
+        <div class="feedback-icon">↺</div>
+        <div class="feedback-content">
+          <strong>VÒNG LẶP PHÒNG THỦ KHÉP KÍN (CLOSED-LOOP AUTONOMOUS DEFENSE):</strong>
+          <span>Khi quản trị viên duyệt lệnh chặn tại Cột 5, hệ thống gọi API OPNsense nạp IP tấn công vào bảng <code>SOC_BLOCKLIST</code> tại Cột 1 ➜ Tường lửa ngắt ngay kết nối của Kali tại biên mạng, hoàn tất chu trình tự vệ an toàn!</span>
+        </div>
+        <button class="button primary small" data-jump="response">Xem tác vụ chờ duyệt →</button>
+      </div>
     </section>
 
     <section class="view" id="view-alerts">
@@ -392,12 +656,11 @@
 
   <div id="toastStack" class="toast-stack" aria-live="polite"></div>
   <aside class="quick-dock" aria-label="SOC quick reference">
-    <span><b>Log ingest</b> Syslog UDP 5514</span>
-    <span><b>A11 API</b> REST/HEC TCP 8000</span>
-    <span><b>Automation</b> n8n Webhook 5678</span>
-    <span><b>Email evidence</b> Mailpit 8025</span>
-    <span><b>Alert rule</b> HIGH/CRITICAL → n8n</span>
+    <span><b>OPNsense</b> 192.168.108.133 (WAN) / 10.10.10.1 (LAN)</span>
+    <span><b>A11 SOC</b> Ubuntu 10.10.10.10 (:8000 REST, :5514 UDP)</span>
+    <span><b>Automation</b> n8n :5678 · Mailpit :8025</span>
+    <span><b>Defense Policy</b> HITL Gate · SOC_BLOCKLIST</span>
   </aside>
-  <script src="/app.js?v=4"></script>
+  <script src="/app.js?v=flow-soc-1"></script>
 </body>
 </html>

@@ -2324,3 +2324,361 @@ select, input, textarea { color:#e6e4ed !important; background:#22232a !importan
   .heat-hour-labels span { font-size:8px; }
   .trend-legend { flex-wrap:wrap; }
 }
+
+/* ==========================================================================
+   A11 SOC MASTER PIPELINE FLOW COMPONENTS (SƠ ĐỒ LUỒNG KIẾN TRÚC)
+   ========================================================================== */
+
+/* Overview Flow Banner (6-step pipeline card) */
+.flow-pipeline-card {
+  margin-bottom: 14px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.88), rgba(11, 15, 23, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+.flow-pipeline-card .panel-head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.button.small {
+  padding: 6px 12px;
+  font-size: 11px;
+}
+.pipeline-steps-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 18px 20px 22px;
+  overflow-x: auto;
+}
+.pipe-step {
+  background: rgba(20, 27, 40, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 9px;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-width: 155px;
+}
+.pipe-step:hover {
+  transform: translateY(-3px);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.12);
+  background: rgba(26, 36, 54, 0.95);
+}
+.step-num {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font: 700 13px ui-monospace, Consolas, monospace;
+  color: rgba(148, 163, 184, 0.35);
+}
+.step-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font: 700 9px ui-monospace, Consolas, monospace;
+  letter-spacing: 0.08em;
+  padding: 3px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.step-badge.udp { background: rgba(56, 189, 248, 0.14); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.step-badge.parse { background: rgba(168, 85, 247, 0.14); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.step-badge.corr { background: rgba(245, 158, 11, 0.14); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.step-badge.ai { background: rgba(99, 102, 241, 0.14); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+.step-badge.hitl { background: rgba(239, 68, 68, 0.14); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.step-badge.soar { background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+.pipe-step strong {
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 650;
+  margin-top: 3px;
+}
+.pipe-step p {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 0;
+}
+.step-metric {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  font: 700 11px ui-monospace, Consolas, monospace;
+  color: #cbd5e1;
+}
+.step-metric span {
+  color: #38bdf8;
+  font-weight: 800;
+}
+.closed-loop-pill {
+  color: #34d399 !important;
+}
+.pipe-arrow {
+  color: rgba(56, 189, 248, 0.5);
+  font-size: 16px;
+  user-select: none;
+  text-align: center;
+  animation: pulseArrow 2s infinite ease-in-out;
+}
+@keyframes pulseArrow {
+  0%, 100% { opacity: 0.4; transform: translateX(0); }
+  50% { opacity: 0.9; transform: translateX(3px); }
+}
+
+/* Dedicated Pipeline Flow View (view-pipeline) */
+.pipeline-header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 24px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(10, 15, 26, 0.95));
+}
+.pipeline-header-main h2 {
+  font-size: 21px;
+  color: #f8fafc;
+  margin: 5px 0 7px;
+}
+.pipeline-header-desc {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 980px;
+}
+.pipeline-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Pipeline quick stats bar */
+.pipeline-metrics-bar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.pipe-stat-pill {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.pipe-stat-pill strong {
+  color: #f8fafc;
+  font-weight: 700;
+}
+.stat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.stat-dot.green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+.stat-dot.amber { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+.stat-dot.cyan { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+.stat-dot.red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+.stat-dot.orange { background: #f97316; box-shadow: 0 0 8px #f97316; }
+.stat-dot.blue { background: #6366f1; box-shadow: 0 0 8px #6366f1; }
+
+/* 5-Zone Flow Grid */
+.master-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.flow-zone-card {
+  border-radius: 12px;
+  background: rgba(13, 18, 28, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+.flow-zone-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+.flow-zone-card.zone-1 { border-top: 3px solid #ef4444; }
+.flow-zone-card.zone-2 { border-top: 3px solid #38bdf8; }
+.flow-zone-card.zone-3 { border-top: 3px solid #f59e0b; }
+.flow-zone-card.zone-4 { border-top: 3px solid #a855f7; }
+.flow-zone-card.zone-5 { border-top: 3px solid #10b981; }
+
+.zone-head {
+  padding: 15px 16px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(18, 26, 38, 0.5);
+}
+.zone-badge {
+  display: inline-block;
+  font: 700 8px ui-monospace, Consolas, monospace;
+  letter-spacing: 0.12em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.zone-badge.red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.zone-badge.cyan { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.zone-badge.amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.zone-badge.purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.zone-badge.orange { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+.zone-head h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 3px;
+}
+.zone-head p {
+  font-size: 10px;
+  color: #94a3b8;
+  margin: 0;
+}
+.zone-body {
+  padding: 14px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+/* Flow subnodes */
+.flow-subnode {
+  background: rgba(18, 25, 38, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  padding: 12px 13px;
+  transition: all 0.18s ease;
+  position: relative;
+}
+.flow-subnode[data-jump] {
+  cursor: pointer;
+}
+.flow-subnode:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  background: rgba(24, 34, 52, 0.95);
+}
+.subnode-top {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.subnode-tag {
+  font: 700 8px ui-monospace, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.subnode-tag.red { color: #f87171; }
+.subnode-tag.cyan { color: #38bdf8; }
+.subnode-tag.amber { color: #fbbf24; }
+.subnode-tag.purple { color: #c084fc; }
+.subnode-tag.green { color: #34d399; }
+.subnode-tag.blue { color: #818cf8; }
+
+.subnode-top strong {
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 650;
+}
+.flow-subnode p {
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.5;
+  margin: 0;
+}
+.flow-subnode code {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 9.5px;
+}
+.flow-connector-down {
+  text-align: center;
+  font: 700 9px ui-monospace, Consolas, monospace;
+  color: rgba(148, 163, 184, 0.55);
+  padding: 2px 0;
+  letter-spacing: 0.04em;
+}
+
+/* Closed loop feedback strip */
+.feedback-closed-loop {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: linear-gradient(90deg, rgba(35, 15, 20, 0.7), rgba(15, 23, 42, 0.85));
+  border-radius: 10px;
+}
+.feedback-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  font-size: 18px;
+  font-weight: 800;
+  animation: rotateIcon 8s infinite linear;
+}
+@keyframes rotateIcon {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+.feedback-content strong {
+  display: block;
+  font: 700 11px ui-monospace, Consolas, monospace;
+  color: #f87171;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.feedback-content span {
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.feedback-content code {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1300px) {
+  .master-flow-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pipeline-metrics-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .master-flow-grid { grid-template-columns: 1fr; }
+  .pipeline-metrics-bar { grid-template-columns: 1fr 1fr; }
+  .pipeline-steps-grid { grid-template-columns: 1fr; }
+  .pipe-arrow { transform: rotate(90deg); }
+}

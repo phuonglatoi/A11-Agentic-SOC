@@ -417,6 +417,19 @@ function renderStats() {
   $("#metricEvents").textContent = state.stats.correlated_events || 0;
   $("#navAlertCount").textContent = total;
   $("#navActionCount").textContent = state.stats.pending_actions || 0;
+
+  const evCount = state.events.length || state.stats.correlated_events || 0;
+  const incCount = state.stats.open_incidents || 0;
+  const actCount = state.stats.pending_actions || 0;
+  if ($("#pipeMetricEvents")) $("#pipeMetricEvents").textContent = evCount;
+  if ($("#pipeMetricAlerts")) $("#pipeMetricAlerts").textContent = total;
+  if ($("#pipeMetricIncidents")) $("#pipeMetricIncidents").textContent = incCount;
+  if ($("#pipeMetricActions")) $("#pipeMetricActions").textContent = actCount;
+
+  if ($("#pipeStatEvents")) $("#pipeStatEvents").textContent = evCount;
+  if ($("#pipeStatAlerts")) $("#pipeStatAlerts").textContent = total;
+  if ($("#pipeStatIncidents")) $("#pipeStatIncidents").textContent = incCount;
+  if ($("#pipeStatActions")) $("#pipeStatActions").textContent = actCount;
   const config = [
     ["critical", "#ff3e60"], ["high", "#ff8548"], ["medium", "#f4bd5e"], ["low", "#4fe1ff"],
   ];
@@ -606,14 +619,18 @@ function renderAudit() {
 
 function switchView(view) {
   const labels = {
-    overview: ["OVERVIEW", "Live defense posture"], alerts: ["ALERT QUEUE", "Detection workbench"],
+    overview: ["OVERVIEW", "Live defense posture"],
+    pipeline: ["PIPELINE FLOW", "Sơ đồ kiến trúc & luồng dữ liệu toàn cảnh (End-to-End Flow)"],
+    alerts: ["ALERT QUEUE", "Detection workbench"],
     events: ["RAW EVENTS", "Security event explorer"],
-    incidents: ["INCIDENTS", "Cases and reports"], response: ["RESPONSE", "Human approval gates"], audit: ["AUDIT TRAIL", "Operational accountability"],
+    incidents: ["INCIDENTS", "Cases and reports"],
+    response: ["RESPONSE", "Human approval gates"],
+    audit: ["AUDIT TRAIL", "Operational accountability"],
   };
   $$(".view").forEach((item) => item.classList.toggle("active", item.id === `view-${view}`));
   $$(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
-  $("#currentViewLabel").textContent = labels[view][0];
-  $("#pageTitle").textContent = labels[view][1];
+  $("#currentViewLabel").textContent = labels[view] ? labels[view][0] : view.toUpperCase();
+  $("#pageTitle").textContent = labels[view] ? labels[view][1] : "A11 Agentic SOC";
 }
 
 async function generateDemo() {
@@ -631,6 +648,8 @@ $("#authForm").addEventListener("submit", (event) => { event.preventDefault(); a
 $("#logoutButton").onclick = () => lockConsole();
 $("#refreshButton").onclick = () => refreshAll();
 $("#demoButton").onclick = generateDemo;
+const pipeDemo = $("#pipeRunDemoBtn");
+if (pipeDemo) pipeDemo.onclick = generateDemo;
 $("#detailClose").onclick = () => $("#detailDialog").close();
 $("#severityFilter").onchange = renderAlerts;
 $("#statusFilter").onchange = renderAlerts;
