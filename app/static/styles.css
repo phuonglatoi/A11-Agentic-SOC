@@ -2672,6 +2672,16 @@ select, input, textarea { color:#e6e4ed !important; background:#22232a !importan
 }
 
 /* Responsive adjustments */
+.quick-dock a, .network-card .node b a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(56, 189, 248, 0.45);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.quick-dock a:hover, .network-card .node b a:hover {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
+}
 @media (max-width: 1300px) {
   .master-flow-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .pipeline-metrics-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }

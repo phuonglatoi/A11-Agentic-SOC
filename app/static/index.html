@@ -6,7 +6,7 @@
   <meta name="description" content="A11 Agentic SOC - local-first security operations dashboard">
   <title>A11 // Agentic SOC</title>
   <!-- Visual direction adapted from “SOC Dashboard (Cyber Security)” by Arun V S, CC BY 4.0: https://www.figma.com/community/file/1596233030947325421/soc-dashboard-cyber-security -->
-  <link rel="stylesheet" href="/styles.css?v=flow-soc-1">
+  <link rel="stylesheet" href="/styles.css?v=flow-soc-2">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -101,10 +101,10 @@
           </div>
         </article>
         <article class="panel network-card">
-          <div class="node attacker"><i></i><span>Kali Linux (WAN)</span><b>192.168.108.128</b></div>
-          <div class="node firewall"><i></i><span>OPNsense (2-NIC)</span><b>WAN 192.168.108.133 · LAN 10.10.10.1</b></div>
-          <div class="node soc"><i></i><span>A11 SOC Target (LAN)</span><b>Ubuntu 10.10.10.10</b></div>
-          <div class="node auto"><i></i><span>SOAR n8n + Mailpit</span><b>:5678 Webhook · :8025 SMTP</b></div>
+          <div class="node attacker"><i></i><span>OPNsense Firewall</span><b>WAN 192.168.228.142 · LAN 192.168.1.1</b></div>
+          <div class="node soc"><i></i><span>Hệ thống A11 SOC</span><b><a href="http://192.168.1.10:8000/" target="_blank" rel="noopener">http://192.168.1.10:8000/</a></b></div>
+          <div class="node auto"><i></i><span>n8n Automation</span><b><a href="http://127.0.0.1:5678/workflow/" target="_blank" rel="noopener">http://127.0.0.1:5678/workflow/</a></b></div>
+          <div class="node firewall"><i></i><span>Mailpit Inbox</span><b><a href="http://127.0.0.1:8025/" target="_blank" rel="noopener">http://127.0.0.1:8025/</a></b></div>
         </article>
       </div>
 
@@ -331,8 +331,9 @@
         </div>
         <div class="pipeline-header-actions">
           <button class="button primary" id="pipeRunDemoBtn">⌁ Chạy kịch bản Lab</button>
-          <a class="button secondary" href="http://10.10.10.10:8025" target="_blank" rel="noopener">✉ Mailpit (:8025)</a>
-          <a class="button secondary" href="http://10.10.10.10:5678" target="_blank" rel="noopener">⚙ n8n (:5678)</a>
+          <a class="button secondary" href="http://192.168.1.10:8000/" target="_blank" rel="noopener">⌁ SOC (192.168.1.10:8000)</a>
+          <a class="button secondary" href="http://127.0.0.1:5678/workflow/" target="_blank" rel="noopener">⚙ n8n (127.0.0.1:5678/workflow/)</a>
+          <a class="button secondary" href="http://127.0.0.1:8025/" target="_blank" rel="noopener">✉ Mailpit (127.0.0.1:8025)</a>
           <button class="button secondary" data-jump="response">⌾ Hàng đợi duyệt HITL</button>
         </div>
       </div>
@@ -384,7 +385,7 @@
             <div class="flow-subnode attacker">
               <div class="subnode-top">
                 <span class="subnode-tag red">KẺ TẤN CÔNG</span>
-                <strong>Kali Linux (192.168.108.128)</strong>
+                <strong>Kali Linux (192.168.228.128)</strong>
               </div>
               <p>Phát 15 kịch bản kiểm thử: Nmap SYN/UDP scan, Web OWASP SQLi/Traversal/.env/XSS, DoS Slowloris/Flood, Hydra SSH.</p>
             </div>
@@ -394,15 +395,15 @@
                 <span class="subnode-tag cyan">TƯỜNG LỬA BIÊN</span>
                 <strong>OPNsense (2-NIC)</strong>
               </div>
-              <p>WAN 192.168.108.133 · LAN 10.10.10.1<br>PF Engine Default Deny · NAT Port 80 · Suricata IDS · Bảng động <code>SOC_BLOCKLIST</code>.</p>
+              <p>WAN 192.168.228.142 · LAN 192.168.1.1<br>PF Engine Default Deny · NAT Port 80 · Suricata IDS · Bảng động <code>SOC_BLOCKLIST</code>.</p>
             </div>
             <div class="flow-connector-down">▼ Chuyển tiếp cổng 80 vào LAN</div>
             <div class="flow-subnode target">
               <div class="subnode-top">
                 <span class="subnode-tag green">MỤC TIÊU & SOC</span>
-                <strong>Ubuntu SOC (10.10.10.10)</strong>
+                <strong>Ubuntu SOC (192.168.1.10)</strong>
               </div>
-              <p>Apache2 Web (:80) + Cụm 4 Docker container (soc-app, ollama, n8n, mailpit).</p>
+              <p>SOC Web: <code>http://192.168.1.10:8000/</code> · n8n: <code>http://127.0.0.1:5678/workflow/</code> · Mailpit: <code>http://127.0.0.1:8025/</code>.</p>
             </div>
           </div>
         </article>
@@ -522,9 +523,9 @@
             <div class="flow-subnode soar-auto" data-jump="response">
               <div class="subnode-top">
                 <span class="subnode-tag amber">SOAR NHÁNH 1 (TỰ ĐỘNG)</span>
-                <strong>n8n + Mailpit (:8025)</strong>
+                <strong>n8n + Mailpit</strong>
               </div>
-              <p>Bắn Webhook sang n8n (:5678) ➜ Định dạng mẫu HTML ➜ Chuyển tiếp email cảnh báo về Mailpit.</p>
+              <p>Bắn Webhook sang n8n (<code>http://127.0.0.1:5678/workflow/</code>) ➜ Định dạng mẫu HTML ➜ Chuyển tiếp email cảnh báo về Mailpit (<code>http://127.0.0.1:8025/</code>).</p>
             </div>
             <div class="flow-subnode soar-block" data-jump="response">
               <div class="subnode-top">
@@ -656,11 +657,11 @@
 
   <div id="toastStack" class="toast-stack" aria-live="polite"></div>
   <aside class="quick-dock" aria-label="SOC quick reference">
-    <span><b>OPNsense</b> 192.168.108.133 (WAN) / 10.10.10.1 (LAN)</span>
-    <span><b>A11 SOC</b> Ubuntu 10.10.10.10 (:8000 REST, :5514 UDP)</span>
-    <span><b>Automation</b> n8n :5678 · Mailpit :8025</span>
-    <span><b>Defense Policy</b> HITL Gate · SOC_BLOCKLIST</span>
+    <span><b>OPNsense</b> 192.168.228.142 (WAN) / 192.168.1.1 (LAN)</span>
+    <span><b>A11 SOC</b> <a href="http://192.168.1.10:8000/" target="_blank" rel="noopener">http://192.168.1.10:8000/</a></span>
+    <span><b>n8n</b> <a href="http://127.0.0.1:5678/workflow/" target="_blank" rel="noopener">http://127.0.0.1:5678/workflow/</a></span>
+    <span><b>Mailpit</b> <a href="http://127.0.0.1:8025/" target="_blank" rel="noopener">http://127.0.0.1:8025/</a></span>
   </aside>
-  <script src="/app.js?v=flow-soc-1"></script>
+  <script src="/app.js?v=flow-soc-2"></script>
 </body>
 </html>
